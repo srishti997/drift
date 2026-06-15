@@ -1,6 +1,8 @@
 # Drift
 
-Drift is an AI-powered behavioral intelligence platform that analyzes digital activity to understand focus, context switching, and productivity patterns.
+### Human Observability Platform
+
+An AI-powered behavioral intelligence system that analyzes digital activity to infer intent, detect focus drift, and explain why goals succeed or fail.
 
 ## Features
 
