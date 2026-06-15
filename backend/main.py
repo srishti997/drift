@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from backend.drift_engine import calculate_drift_metrics
 
 from backend.session_builder import build_sessions
+from backend.intent_engine import infer_intent
 
 
 app = FastAPI(title="Drift API")
@@ -59,3 +60,26 @@ def get_sessions():
 @app.get("/drift")
 def get_drift():
     return calculate_drift_metrics(activity_logs)
+
+@app.get("/intent")
+def get_intents():
+    results = []
+
+    for log in activity_logs:
+        intent_data = infer_intent(
+            log.app_name,
+            log.window_title,
+            log.activity_type
+        )
+
+        results.append({
+            "app_name": log.app_name,
+            "window_title": log.window_title,
+            "activity_type": log.activity_type,
+            "duration_seconds": log.duration_seconds,
+            "intent": intent_data["intent"],
+            "goal": intent_data["goal"],
+            "confidence": intent_data["confidence"]
+        })
+
+    return results
