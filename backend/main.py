@@ -11,7 +11,7 @@ from backend.goal_engine import build_goal_summary
 from backend.context_switch_engine import analyze_context_switches
 from backend.mission_engine import build_mission_summary
 from backend.timeline_engine import build_timeline
-
+from backend.pattern_engine import detect_behavior_patterns
 app = FastAPI(title="Drift API")
 
 activity_logs = []
@@ -102,3 +102,7 @@ def get_missions():
 @app.get("/timeline")
 def get_timeline():
     return build_timeline(activity_logs)
+
+@app.get("/patterns")
+def get_patterns():
+    return detect_behavior_patterns(activity_logs)
