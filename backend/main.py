@@ -9,7 +9,8 @@ from backend.session_builder import build_sessions
 from backend.intent_engine import infer_intent
 from backend.goal_engine import build_goal_summary
 from backend.context_switch_engine import analyze_context_switches
-
+from backend.mission_engine import build_mission_summary
+from backend.timeline_engine import build_timeline
 
 app = FastAPI(title="Drift API")
 
@@ -93,3 +94,11 @@ def get_goals():
 @app.get("/context-switches")
 def get_context_switches():
     return analyze_context_switches(activity_logs)
+
+@app.get("/missions")
+def get_missions():
+    return build_mission_summary(activity_logs)
+
+@app.get("/timeline")
+def get_timeline():
+    return build_timeline(activity_logs)
