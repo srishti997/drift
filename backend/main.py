@@ -7,6 +7,8 @@ from backend.drift_engine import calculate_drift_metrics
 
 from backend.session_builder import build_sessions
 from backend.intent_engine import infer_intent
+from backend.goal_engine import build_goal_summary
+from backend.context_switch_engine import analyze_context_switches
 
 
 app = FastAPI(title="Drift API")
@@ -83,3 +85,11 @@ def get_intents():
         })
 
     return results
+
+@app.get("/goals")
+def get_goals():
+    return build_goal_summary(activity_logs)
+
+@app.get("/context-switches")
+def get_context_switches():
+    return analyze_context_switches(activity_logs)

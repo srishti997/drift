@@ -120,13 +120,13 @@ def infer_intent(app_name: str, window_title: str, activity_type: str):
 
     if activity_type == "BROWSING":
         return {
-            "intent": "General Browsing",
-            "goal": "Unknown",
-            "confidence": 0.45,
+            "intent": "Research",
+            "goal": "Information Gathering",
+            "confidence": 0.5,
         }
 
     return {
-        "intent": "Unknown",
-        "goal": "Unknown",
-        "confidence": 0.3,
-    }
+    "intent": "Unclassified Activity",
+    "goal": "Needs Better Classification",
+    "confidence": 0.2,
+}
