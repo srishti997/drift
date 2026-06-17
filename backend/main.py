@@ -12,6 +12,8 @@ from backend.context_switch_engine import analyze_context_switches
 from backend.mission_engine import build_mission_summary
 from backend.timeline_engine import build_timeline
 from backend.pattern_engine import detect_behavior_patterns
+from backend.deep_work_engine import build_deep_work_summary
+
 app = FastAPI(title="Drift API")
 
 activity_logs = []
@@ -106,3 +108,7 @@ def get_timeline():
 @app.get("/patterns")
 def get_patterns():
     return detect_behavior_patterns(activity_logs)
+
+@app.get("/deep-work")
+def get_deep_work():
+    return build_deep_work_summary(activity_logs)
