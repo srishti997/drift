@@ -14,6 +14,7 @@ from backend.timeline_engine import build_timeline
 from backend.pattern_engine import detect_behavior_patterns
 from backend.deep_work_engine import build_deep_work_summary
 from backend.productivity_score_engine import build_productivity_score
+from backend.daily_report_engine import build_daily_report
 
 app = FastAPI(title="Drift API")
 
@@ -117,3 +118,7 @@ def get_deep_work():
 @app.get("/score")
 def get_score():
     return build_productivity_score(activity_logs)
+
+@app.get("/daily-report")
+def get_daily_report():
+    return build_daily_report(activity_logs)
