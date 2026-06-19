@@ -3,8 +3,10 @@ from typing import List
 
 from fastapi import FastAPI
 from pydantic import BaseModel
-from backend.drift_engine import calculate_drift_metrics
 
+from backend.storage import load_activity_logs, save_activity_logs
+
+from backend.drift_engine import calculate_drift_metrics
 from backend.session_builder import build_sessions
 from backend.intent_engine import infer_intent
 from backend.goal_engine import build_goal_summary
@@ -17,9 +19,8 @@ from backend.productivity_score_engine import build_productivity_score
 from backend.daily_report_engine import build_daily_report
 from backend.coach_engine import build_coach_advice
 
-app = FastAPI(title="Drift API")
 
-activity_logs = []
+app = FastAPI(title="Drift API")
 
 
 class ActivityLog(BaseModel):
@@ -33,6 +34,9 @@ class ActivityLog(BaseModel):
     mouse_count: int
 
 
+activity_logs = load_activity_logs(ActivityLog)
+
+
 @app.get("/")
 def root():
     return {"message": "Drift API is running"}
@@ -41,7 +45,12 @@ def root():
 @app.post("/activity")
 def create_activity(log: ActivityLog):
     activity_logs.append(log)
-    return {"message": "activity saved"}
+    save_activity_logs(activity_logs)
+
+    return {
+        "message": "activity saved",
+        "total_logs": len(activity_logs)
+    }
 
 
 @app.get("/activity", response_model=List[ActivityLog])
@@ -65,9 +74,11 @@ def get_summary():
 def get_sessions():
     return build_sessions(activity_logs)
 
+
 @app.get("/drift")
 def get_drift():
     return calculate_drift_metrics(activity_logs)
+
 
 @app.get("/intent")
 def get_intents():
@@ -92,37 +103,46 @@ def get_intents():
 
     return results
 
+
 @app.get("/goals")
 def get_goals():
     return build_goal_summary(activity_logs)
+
 
 @app.get("/context-switches")
 def get_context_switches():
     return analyze_context_switches(activity_logs)
 
+
 @app.get("/missions")
 def get_missions():
     return build_mission_summary(activity_logs)
+
 
 @app.get("/timeline")
 def get_timeline():
     return build_timeline(activity_logs)
 
+
 @app.get("/patterns")
 def get_patterns():
     return detect_behavior_patterns(activity_logs)
+
 
 @app.get("/deep-work")
 def get_deep_work():
     return build_deep_work_summary(activity_logs)
 
+
 @app.get("/score")
 def get_score():
     return build_productivity_score(activity_logs)
 
+
 @app.get("/daily-report")
 def get_daily_report():
     return build_daily_report(activity_logs)
+
 
 @app.get("/coach")
 def get_coach():
