@@ -1,31 +1,78 @@
 # Drift
 
-### Human Observability Platform
+## Human Observability Platform
 
-An AI-powered behavioral intelligence system that analyzes digital activity to infer intent, detect focus drift, and explain why goals succeed or fail.
+Drift is an AI-powered behavioral intelligence system that analyzes digital activity to understand how people work, learn, and focus.
 
-## Features
+Instead of only tracking time, Drift infers user intent, detects context switching, identifies deep work sessions, measures productivity, and generates personalized coaching insights.
 
-- Desktop activity tracking
-- Keyboard & mouse monitoring
-- Activity classification
-- Session builder
-- Drift score calculation
-- FastAPI backend
+---
+
+## Key Capabilities
+
+### Activity Intelligence
+- Activity Tracking
+- Session Building
+- Persistent Activity Storage
+
+### Behavioral Understanding
+- Intent Inference
+- Goal Detection
+- Mission Detection
+- Context Switch Analysis
+- Cognitive Timeline Generation
+
+### Productivity Analytics
+- Deep Work Detection
+- Productivity Scoring
+- Behavioral Pattern Detection
+- Mission Recovery & Abandonment Analysis
+
+### AI Insights
+- Daily Productivity Reports
+- Personalized AI Coach Recommendations
+
+### Visualization
+- Streamlit Dashboard
+- Mission Breakdown
+- Focus Analytics
+- Cognitive Timeline View
+
+---
 
 ## Tech Stack
 
+### Backend
 - Python
 - FastAPI
-- Pynput
+- Pydantic
+
+### Activity Collection
+- pynput
 - psutil
 - pywin32
 
-## Roadmap
+### Data Layer
+- JSON Persistence Layer
 
-- ✅ Activity Tracking
-- ✅ Session Builder
-- ✅ Drift Engine
-- 🚧 Intent Engine
-- 🚧 Behavior Graph
-- 🚧 Goal Autopsy
+### Visualization
+- Streamlit
+- Plotly
+- Pandas
+
+---
+
+## Architecture
+
+```text
+Activity Tracker
+       ↓
+FastAPI Backend
+       ↓
+Behavior Analysis Engines
+       ↓
+Productivity Intelligence Layer
+       ↓
+AI Coach
+       ↓
+Streamlit Dashboard
