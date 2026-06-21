@@ -21,5 +21,15 @@ Thumbs.db
 # Environment variables
 .env
 
-# SQLite (if used later)
+# SQLite
 *.db
+
+# Drift runtime data
+data/activity_logs.json
+data/users.json
+
+# Streamlit cache
+.streamlit/
+
+# Python cache
+.pytest_cache/
