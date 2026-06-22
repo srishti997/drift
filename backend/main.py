@@ -18,7 +18,7 @@ from backend.deep_work_engine import build_deep_work_summary
 from backend.productivity_score_engine import build_productivity_score
 from backend.daily_report_engine import build_daily_report
 from backend.coach_engine import build_coach_advice
-
+from backend.alert_engine import analyze_for_alerts
 
 app = FastAPI(title="Drift API")
 
@@ -42,15 +42,7 @@ def root():
     return {"message": "Drift API is running"}
 
 
-@app.post("/activity")
-def create_activity(log: ActivityLog):
-    activity_logs.append(log)
-    save_activity_logs(activity_logs)
 
-    return {
-        "message": "activity saved",
-        "total_logs": len(activity_logs)
-    }
 
 
 @app.get("/activity", response_model=List[ActivityLog])
@@ -147,3 +139,16 @@ def get_daily_report():
 @app.get("/coach")
 def get_coach():
     return build_coach_advice(activity_logs)
+
+@app.post("/activity")
+def create_activity(log: ActivityLog):
+    activity_logs.append(log)
+
+    save_activity_logs(activity_logs)
+
+    analyze_for_alerts(activity_logs)
+
+    return {
+        "message": "activity saved",
+        "total_logs": len(activity_logs)
+    }
