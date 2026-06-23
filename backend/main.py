@@ -20,6 +20,7 @@ from backend.daily_report_engine import build_daily_report
 from backend.coach_engine import build_coach_advice
 from backend.alert_engine import analyze_for_alerts
 from backend.prediction_engine import predict_drift_risk
+from backend.behavior_graph_engine import build_behavior_graph
 
 app = FastAPI(title="Drift API")
 
@@ -157,3 +158,7 @@ def create_activity(log: ActivityLog):
 @app.get("/predict")
 def get_prediction():
     return predict_drift_risk(activity_logs)
+
+@app.get("/behavior-graph")
+def get_behavior_graph():
+    return build_behavior_graph(activity_logs)
