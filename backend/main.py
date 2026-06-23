@@ -19,6 +19,7 @@ from backend.productivity_score_engine import build_productivity_score
 from backend.daily_report_engine import build_daily_report
 from backend.coach_engine import build_coach_advice
 from backend.alert_engine import analyze_for_alerts
+from backend.prediction_engine import predict_drift_risk
 
 app = FastAPI(title="Drift API")
 
@@ -152,3 +153,7 @@ def create_activity(log: ActivityLog):
         "message": "activity saved",
         "total_logs": len(activity_logs)
     }
+
+@app.get("/predict")
+def get_prediction():
+    return predict_drift_risk(activity_logs)
