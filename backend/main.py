@@ -21,6 +21,7 @@ from backend.coach_engine import build_coach_advice
 from backend.alert_engine import analyze_for_alerts
 from backend.prediction_engine import predict_drift_risk
 from backend.behavior_graph_engine import build_behavior_graph
+from backend.loop_detector_engine import detect_behavior_loops, get_next_app_prediction
 
 app = FastAPI(title="Drift API")
 
@@ -162,3 +163,12 @@ def get_prediction():
 @app.get("/behavior-graph")
 def get_behavior_graph():
     return build_behavior_graph(activity_logs)
+
+@app.get("/loops")
+def get_loops():
+    return detect_behavior_loops(activity_logs)
+
+
+@app.get("/next-app")
+def get_next_app():
+    return get_next_app_prediction(activity_logs)
