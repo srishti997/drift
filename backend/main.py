@@ -22,6 +22,7 @@ from backend.alert_engine import analyze_for_alerts
 from backend.prediction_engine import predict_drift_risk
 from backend.behavior_graph_engine import build_behavior_graph
 from backend.loop_detector_engine import detect_behavior_loops, get_next_app_prediction
+from backend.recovery_cost_engine import calculate_recovery_cost
 
 app = FastAPI(title="Drift API")
 
@@ -172,3 +173,7 @@ def get_loops():
 @app.get("/next-app")
 def get_next_app():
     return get_next_app_prediction(activity_logs)
+
+@app.get("/recovery-cost")
+def get_recovery_cost():
+    return calculate_recovery_cost(activity_logs)
