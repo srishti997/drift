@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 from datetime import datetime
+from streamlit_autorefresh import st_autorefresh
 
 API_BASE_URL = "http://127.0.0.1:8000"
 USERS_FILE = "data/users.json"
@@ -411,25 +412,15 @@ def render_sidebar(alive):
 
         st.markdown("<div style='border-top:1px solid rgba(148,163,184,0.07);margin:16px 0;'></div>", unsafe_allow_html=True)
 
-        # Auto-refresh toggle
-        auto = st.toggle("Auto-refresh (30s)", value=False, key="auto_refresh")
-        if auto:
-            import time
-            now = datetime.now()
-            last = st.session_state.last_refresh
-            if last is None or (now - last).seconds >= 30:
-                st.session_state.last_refresh = now
-                time.sleep(0.3)
-                st.rerun()
-
         # Manual refresh
-        if st.button("↻  Refresh Now", use_container_width=True):
-            st.session_state.last_refresh = datetime.now(); st.rerun()
+        if st.button("Refresh Now", use_container_width=True, key="manual_refresh_btn"):
+            st.session_state.last_refresh = datetime.now()
+            st.rerun()
 
         # Last updated
         if st.session_state.last_refresh:
             ts = st.session_state.last_refresh.strftime("%H:%M:%S")
-            st.markdown(f"<div style='font-size:10px;color:#1E293B;text-align:center;margin-top:4px;'>Updated {ts}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size:10px;color:#334155;text-align:center;margin-top:4px;'>Auto-refreshes every 30s · Last updated {ts}</div>", unsafe_allow_html=True)
 
         st.markdown("<div style='border-top:1px solid rgba(148,163,184,0.07);margin:16px 0 10px;'></div>", unsafe_allow_html=True)
 
@@ -897,6 +888,9 @@ def render_daily_report():
 if not st.session_state.authenticated:
     render_auth()
 else:
+    count = st_autorefresh(interval=30000, limit=None, key="ar")
+    if count > 0:
+        st.session_state.last_refresh = datetime.now()
     alive = api_alive()
     render_sidebar(alive)
     if st.session_state.active_page == "Overview":
