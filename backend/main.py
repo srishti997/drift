@@ -23,7 +23,7 @@ from backend.prediction_engine import predict_drift_risk
 from backend.behavior_graph_engine import build_behavior_graph
 from backend.loop_detector_engine import detect_behavior_loops, get_next_app_prediction
 from backend.recovery_cost_engine import calculate_recovery_cost
-
+from backend.autopsy_engine import build_mission_autopsy
 app = FastAPI(title="Drift API")
 
 
@@ -177,3 +177,7 @@ def get_next_app():
 @app.get("/recovery-cost")
 def get_recovery_cost():
     return calculate_recovery_cost(activity_logs)
+
+@app.get("/autopsy")
+def get_autopsy():
+    return build_mission_autopsy(activity_logs)
