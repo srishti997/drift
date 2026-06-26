@@ -19,11 +19,15 @@ from backend.productivity_score_engine import build_productivity_score
 from backend.daily_report_engine import build_daily_report
 from backend.coach_engine import build_coach_advice
 from backend.alert_engine import analyze_for_alerts
+
 from backend.prediction_engine import predict_drift_risk
 from backend.behavior_graph_engine import build_behavior_graph
 from backend.loop_detector_engine import detect_behavior_loops, get_next_app_prediction
 from backend.recovery_cost_engine import calculate_recovery_cost
 from backend.autopsy_engine import build_mission_autopsy
+from backend.recovery_engine import build_recovery_summary
+
+
 app = FastAPI(title="Drift API")
 
 
@@ -46,7 +50,16 @@ def root():
     return {"message": "Drift API is running"}
 
 
+@app.post("/activity")
+def create_activity(log: ActivityLog):
+    activity_logs.append(log)
+    save_activity_logs(activity_logs)
+    analyze_for_alerts(activity_logs)
 
+    return {
+        "message": "activity saved",
+        "total_logs": len(activity_logs)
+    }
 
 
 @app.get("/activity", response_model=List[ActivityLog])
@@ -144,26 +157,16 @@ def get_daily_report():
 def get_coach():
     return build_coach_advice(activity_logs)
 
-@app.post("/activity")
-def create_activity(log: ActivityLog):
-    activity_logs.append(log)
-
-    save_activity_logs(activity_logs)
-
-    analyze_for_alerts(activity_logs)
-
-    return {
-        "message": "activity saved",
-        "total_logs": len(activity_logs)
-    }
 
 @app.get("/predict")
 def get_prediction():
     return predict_drift_risk(activity_logs)
 
+
 @app.get("/behavior-graph")
 def get_behavior_graph():
     return build_behavior_graph(activity_logs)
+
 
 @app.get("/loops")
 def get_loops():
@@ -174,9 +177,16 @@ def get_loops():
 def get_next_app():
     return get_next_app_prediction(activity_logs)
 
+
 @app.get("/recovery-cost")
 def get_recovery_cost():
     return calculate_recovery_cost(activity_logs)
+
+
+@app.get("/recovery")
+def get_recovery():
+    return build_recovery_summary(activity_logs)
+
 
 @app.get("/autopsy")
 def get_autopsy():
