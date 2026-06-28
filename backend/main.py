@@ -26,7 +26,7 @@ from backend.loop_detector_engine import detect_behavior_loops, get_next_app_pre
 from backend.recovery_cost_engine import calculate_recovery_cost
 from backend.autopsy_engine import build_mission_autopsy
 from backend.recovery_engine import build_recovery_summary
-
+from backend.chat_engine import answer_user_question
 
 app = FastAPI(title="Drift API")
 
@@ -43,6 +43,8 @@ class ActivityLog(BaseModel):
 
 
 activity_logs = load_activity_logs(ActivityLog)
+class ChatRequest(BaseModel):
+    question: str
 
 
 @app.get("/")
@@ -191,3 +193,7 @@ def get_recovery():
 @app.get("/autopsy")
 def get_autopsy():
     return build_mission_autopsy(activity_logs)
+
+@app.post("/chat")
+def chat(request: ChatRequest):
+    return answer_user_question(request.question, activity_logs)
