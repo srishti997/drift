@@ -40,8 +40,17 @@ def generate_ai_response(prompt: str):
         }
 
     except Exception as error:
+    error_message = str(error)
+
+    if "429" in error_message or "quota" in error_message.lower():
         return {
-            "answer": f"Gemini failed: {str(error)}",
+            "answer": "The AI reasoning service is temporarily unavailable due to API quota limits. Please try again in a few minutes.",
             "provider": "gemini",
-            "success": False,
+            "success": False
         }
+
+    return {
+        "answer": "The AI reasoning service encountered an unexpected error. Please try again later.",
+        "provider": "gemini",
+        "success": False
+    }
