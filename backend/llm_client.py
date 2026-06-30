@@ -22,7 +22,7 @@ def generate_ai_response(prompt: str):
 
     if not api_key:
         return {
-            "answer": "Gemini API key is missing. Add GEMINI_API_KEY to your .env file.",
+            "answer": "Gemini API key is missing.",
             "provider": "gemini",
             "success": False,
         }
@@ -30,7 +30,8 @@ def generate_ai_response(prompt: str):
     try:
         genai.configure(api_key=api_key)
 
-        model = genai.GenerativeModel("gemini-2.0-flash-lite")
+        model = genai.GenerativeModel("gemini-2.0-flash")
+
         response = model.generate_content(prompt)
 
         return {
@@ -40,17 +41,17 @@ def generate_ai_response(prompt: str):
         }
 
     except Exception as error:
-    error_message = str(error)
+        error_message = str(error)
 
-    if "429" in error_message or "quota" in error_message.lower():
+        if "429" in error_message or "quota" in error_message.lower():
+            return {
+                "answer": "The AI reasoning service is temporarily unavailable due to API quota limits. Please try again in a few minutes.",
+                "provider": "gemini",
+                "success": False,
+            }
+
         return {
-            "answer": "The AI reasoning service is temporarily unavailable due to API quota limits. Please try again in a few minutes.",
+            "answer": f"Gemini Error: {error_message}",
             "provider": "gemini",
-            "success": False
+            "success": False,
         }
-
-    return {
-        "answer": "The AI reasoning service encountered an unexpected error. Please try again later.",
-        "provider": "gemini",
-        "success": False
-    }
