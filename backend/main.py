@@ -27,6 +27,7 @@ from backend.recovery_cost_engine import calculate_recovery_cost
 from backend.autopsy_engine import build_mission_autopsy
 from backend.recovery_engine import build_recovery_summary
 from backend.chat_engine import answer_user_question
+from backend.replay_engine import build_day_replay
 
 app = FastAPI(title="Drift API")
 
@@ -197,3 +198,7 @@ def get_autopsy():
 @app.post("/chat")
 def chat(request: ChatRequest):
     return answer_user_question(request.question, activity_logs)
+
+@app.get("/replay")
+def get_replay():
+    return build_day_replay(activity_logs)
