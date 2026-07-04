@@ -8,6 +8,7 @@ import json
 import os
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
+from ui.replay_page import render_replay_page
 
 API_BASE_URL = "http://127.0.0.1:8000"
 USERS_FILE = "data/users.json"
@@ -778,112 +779,12 @@ def render_daily_report():
             st.markdown("</div>", unsafe_allow_html=True)
 
 # ── Page 5: Replay ────────────────────────────────────────────────────────────
-print("=" * 80)
-print("REPLAY FUNCTION LOADED")
-print("=" * 80)
+
+from ui.replay_page import render_replay_page
+
+
 def render_replay():
-    replay = api("/replay")
-
-    st.markdown("""
-    <div style="margin-bottom:24px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#22D3EE;text-transform:uppercase;margin-bottom:6px;">Replay</div>
-        <div class="page-title">Replay My Day.</div>
-        <div class="page-sub">A narrative timeline of how your focus shifted today.</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if not replay or not replay.get("events"):
-        empty("No replay events yet. Run the tracker for a few minutes.")
-        return
-
-    st.markdown(f"""
-    <div class="card-cyan">
-        <div class="eyebrow">Today's Story</div>
-        <div style="font-size:15px;color:#CBD5E1;line-height:1.75;">
-            {replay.get("summary", "No summary available.")}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    s1, s2, s3, s4 = st.columns(4)
-
-    stats = [
-        ("Total Time", f"{replay.get('total_minutes', 0)} min", "tracked sessions"),
-        ("Top Mission", replay.get("top_mission", "Unknown"), "dominant focus"),
-        ("Focus Lost", replay.get("focus_lost_events", 0), "drift sessions"),
-        ("Recoveries", replay.get("recovery_events", 0), "return sessions"),
-    ]
-
-    for col, (label, value, sub) in zip([s1, s2, s3, s4], stats):
-        with col:
-            st.markdown(
-                f"""
-                <div class="stat-tile" style="margin-bottom:18px;">
-                    <div class="stat-label">{label}</div>
-                    <div class="stat-value" style="font-size:22px;">{value}</div>
-                    <div class="stat-sub">{sub}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-    st.markdown('<div class="card"><div class="eyebrow">Timeline</div>', unsafe_allow_html=True)
-
-    events = replay.get("events", [])
-
-    for event in events:
-        event_type = event.get("event_type", "focused")
-
-        if event_type == "start":
-            icon = "🚀"
-            color = "#22D3EE"
-            label = "Started"
-        elif event_type == "focus_lost":
-            icon = "⚠️"
-            color = "#F87171"
-            label = "Focus Lost"
-        elif event_type == "recovered":
-            icon = "✅"
-            color = "#34D399"
-            label = "Recovered"
-        else:
-            icon = "💻"
-            color = "#818CF8"
-            label = "Focused"
-
-        st.markdown(f"""
-        <div style="
-            background:rgba(20,30,50,.55);
-            border:1px solid rgba(148,163,184,.08);
-            border-left:4px solid {color};
-            border-radius:14px;
-            padding:16px 18px;
-            margin-bottom:12px;
-        ">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <div style="font-size:12px;color:{color};font-weight:800;letter-spacing:.08em;text-transform:uppercase;">
-                    {icon} {label}
-                </div>
-                <div style="font-size:12px;color:#64748B;font-family:'JetBrains Mono',monospace;">
-                    {event.get("time", "—")} · {event.get("duration_minutes", 0)} min
-                </div>
-            </div>
-
-            <div style="font-size:18px;font-weight:800;color:#F1F5F9;margin-bottom:6px;">
-                {event.get("mission", "Unknown")}
-            </div>
-
-            <div style="font-size:14px;color:#94A3B8;line-height:1.6;">
-                {event.get("story", "")}
-            </div>
-
-            <div style="font-size:12px;color:#475569;margin-top:8px;">
-                Activity: {event.get("activity_type", "Unknown")}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    render_replay_page(api, empty)
 
 # ── Router ────────────────────────────────────────────────────────────────────
 
