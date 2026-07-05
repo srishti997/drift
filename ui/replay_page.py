@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 
 
@@ -17,7 +18,50 @@ def render_replay_page(api, empty):
         return
 
     events = replay.get("events", [])
+    total = len(events)
 
+    if "playback_index" not in st.session_state:
+        st.session_state.playback_index = 0
+
+    if "playback_running" not in st.session_state:
+        st.session_state.playback_running = False
+
+    if "playback_speed" not in st.session_state:
+        st.session_state.playback_speed = 1
+
+    current_index = min(st.session_state.playback_index, total - 1)
+    current = events[current_index]
+
+    render_summary(replay)
+    render_stats(replay)
+    render_controls(total, current_index)
+
+    progress = int(((current_index + 1) / total) * 100)
+    render_progress(current_index, total, progress)
+
+    render_current_session(current)
+
+    st.markdown("""
+    <div style="margin-top:28px;">
+        <div class="eyebrow">Full Timeline</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    for index, event in enumerate(events):
+        render_timeline_row(event, index, current_index)
+
+    if st.session_state.playback_running:
+        if current_index < total - 1:
+            delay = 1.2 / st.session_state.playback_speed
+            time.sleep(delay)
+            st.session_state.playback_index = current_index + 1
+            st.rerun()
+        else:
+            st.session_state.playback_running = False
+            st.rerun()
+
+
+def render_summary(replay):
     st.markdown(f"""
     <div class="card-cyan">
         <div class="eyebrow">Today's Story</div>
@@ -27,6 +71,8 @@ def render_replay_page(api, empty):
     </div>
     """, unsafe_allow_html=True)
 
+
+def render_stats(replay):
     c1, c2, c3, c4 = st.columns(4)
 
     cards = [
@@ -46,39 +92,61 @@ def render_replay_page(api, empty):
             </div>
             """, unsafe_allow_html=True)
 
+
+def render_controls(total, current_index):
     st.write("")
 
-    if "playback_index" not in st.session_state:
-        st.session_state.playback_index = 0
+    c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
 
-    total = len(events)
-    current_index = min(st.session_state.playback_index, total - 1)
-    current = events[current_index]
-
-    left, mid, right = st.columns([1, 1, 1])
-
-    with left:
+    with c1:
         if st.button("← Previous", use_container_width=True):
+            st.session_state.playback_running = False
             st.session_state.playback_index = max(0, current_index - 1)
             st.rerun()
 
-    with mid:
-        if st.button("▶ Next Session", use_container_width=True):
+    with c2:
+        if st.session_state.playback_running:
+            if st.button("⏸ Pause", use_container_width=True):
+                st.session_state.playback_running = False
+                st.rerun()
+        else:
+            if st.button("▶ Auto Play", use_container_width=True):
+                if current_index >= total - 1:
+                    st.session_state.playback_index = 0
+                st.session_state.playback_running = True
+                st.rerun()
+
+    with c3:
+        if st.button("▶ Next", use_container_width=True):
+            st.session_state.playback_running = False
             st.session_state.playback_index = min(total - 1, current_index + 1)
             st.rerun()
 
-    with right:
+    with c4:
+        speed = st.selectbox(
+            "Speed",
+            options=[1, 2, 5],
+            index=[1, 2, 5].index(st.session_state.playback_speed),
+            format_func=lambda x: f"{x}x",
+            label_visibility="collapsed"
+        )
+        st.session_state.playback_speed = speed
+
+    with c5:
         if st.button("↺ Restart", use_container_width=True):
+            st.session_state.playback_running = False
             st.session_state.playback_index = 0
             st.rerun()
 
-    progress = int(((current_index + 1) / total) * 100)
+
+def render_progress(current_index, total, progress):
+    running_text = "Playing" if st.session_state.playback_running else "Paused"
 
     st.markdown(f"""
     <div class="card-purple">
         <div class="eyebrow">Playback Progress</div>
         <div style="display:flex;justify-content:space-between;font-size:13px;color:#64748B;margin-bottom:8px;">
-            <span>Session {current_index + 1} of {total}</span>
+            <span>{running_text} · Session {current_index + 1} of {total}</span>
             <span>{progress}%</span>
         </div>
         <div class="bar-track">
@@ -87,16 +155,6 @@ def render_replay_page(api, empty):
     </div>
     """, unsafe_allow_html=True)
 
-    render_current_session(current)
-
-    st.markdown("""
-    <div style="margin-top:28px;">
-        <div class="eyebrow">Full Timeline</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    for index, event in enumerate(events):
-        render_timeline_row(event, index, current_index)
 
 def render_current_session(event):
     event_type = event.get("event_type", "focused")
@@ -125,6 +183,7 @@ def render_current_session(event):
         </div>
     </div>
     """, unsafe_allow_html=True)
+
 
 def render_timeline_row(event, index, current_index):
     event_type = event.get("event_type", "focused")
