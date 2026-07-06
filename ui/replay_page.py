@@ -20,6 +20,7 @@ def render_replay_page(api, empty):
     events = replay.get("events", [])
 
     initialize_state()
+
     filtered_events = apply_filters(events)
 
     if not filtered_events:
@@ -31,13 +32,14 @@ def render_replay_page(api, empty):
     current = filtered_events[current_index]
 
     render_summary(replay)
-    render_stats(filtered_events, replay)
+    render_stats(filtered_events)
     render_filters(events)
     render_controls(total, current_index)
 
     progress = int(((current_index + 1) / total) * 100)
-    render_progress(current_index, total, progress)
 
+    render_progress(current_index, total, progress)
+    render_replay_map(filtered_events, current_index)
     render_current_session(current)
 
     st.markdown("""
@@ -77,28 +79,46 @@ def render_summary(replay):
     """, unsafe_allow_html=True)
 
 
-def render_stats(events, replay):
+def render_stats(events):
     total_sessions = len(events)
 
-    longest = max(events, key=lambda e: e.get("duration_minutes", 0))
-    longest_focus = max(
-        [e for e in events if e.get("event_type") in ["start", "focused", "recovered"]],
-        key=lambda e: e.get("duration_minutes", 0),
-        default={}
+    productive_sessions = [
+        e for e in events
+        if e.get("activity_type") in ["CODING", "BROWSING", "COMMUNICATION"]
+        and not e.get("is_distraction", False)
+    ]
+
+    drift_sessions = [
+        e for e in events
+        if e.get("event_type") == "focus_lost" or e.get("is_distraction", False)
+    ]
+
+    recovered_sessions = [
+        e for e in events
+        if e.get("event_type") == "recovered"
+    ]
+
+    productive_minutes = round(
+        sum(e.get("duration_minutes", 0) for e in productive_sessions),
+        2
     )
-    longest_distraction = max(
-        [e for e in events if e.get("is_distraction")],
-        key=lambda e: e.get("duration_minutes", 0),
-        default={}
+
+    drift_minutes = round(
+        sum(e.get("duration_minutes", 0) for e in drift_sessions),
+        2
     )
+
+    recovery_rate = 0
+    if drift_sessions:
+        recovery_rate = round((len(recovered_sessions) / len(drift_sessions)) * 100, 1)
 
     c1, c2, c3, c4 = st.columns(4)
 
     cards = [
         ("Sessions", total_sessions, "filtered"),
-        ("Longest Session", f"{longest.get('duration_minutes', 0)} min", longest.get("activity_type", "—")),
-        ("Longest Focus", f"{longest_focus.get('duration_minutes', 0)} min", longest_focus.get("mission", "—")),
-        ("Longest Drift", f"{longest_distraction.get('duration_minutes', 0)} min", longest_distraction.get("activity_type", "—")),
+        ("Productive Time", f"{productive_minutes} min", "focused work"),
+        ("Drift Time", f"{drift_minutes} min", "lost focus"),
+        ("Recovery Rate", f"{recovery_rate}%", "recoveries / drifts"),
     ]
 
     for col, (label, value, sub) in zip([c1, c2, c3, c4], cards):
@@ -130,7 +150,8 @@ def render_filters(events):
             "Filter sessions",
             filter_options,
             index=filter_options.index(st.session_state.replay_filter)
-            if st.session_state.replay_filter in filter_options else 0,
+            if st.session_state.replay_filter in filter_options
+            else 0,
         )
 
     with c2:
@@ -256,6 +277,54 @@ def render_progress(current_index, total, progress):
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+
+def render_replay_map(events, current_index):
+    total_minutes = sum(e.get("duration_minutes", 0) for e in events) or 1
+
+    html = """
+    <div class="card">
+        <div class="eyebrow">Replay Map</div>
+        <div style="display:flex;height:34px;border-radius:999px;overflow:hidden;background:rgba(30,41,59,.8);">
+    """
+
+    for index, event in enumerate(events):
+        event_type = event.get("event_type", "focused")
+        _, _, color = get_event_style(event_type)
+
+        width = max((event.get("duration_minutes", 0) / total_minutes) * 100, 0.6)
+        opacity = "1" if index == current_index else "0.45"
+        border = "2px solid #F8FAFC" if index == current_index else "none"
+
+        title = (
+            f"{event.get('time', '—')} | "
+            f"{event.get('mission', 'Unknown')} | "
+            f"{event.get('duration_minutes', 0)} min"
+        )
+
+        html += f"""
+        <div title="{title}"
+             style="
+                width:{width}%;
+                background:{color};
+                opacity:{opacity};
+                border:{border};
+             ">
+        </div>
+        """
+
+    html += """
+        </div>
+        <div style="display:flex;gap:18px;margin-top:12px;font-size:12px;color:#64748B;flex-wrap:wrap;">
+            <span>🚀 Started</span>
+            <span>💻 Focused</span>
+            <span>✅ Recovered</span>
+            <span>⚠️ Focus Lost</span>
+        </div>
+    </div>
+    """
+
+    st.markdown(html, unsafe_allow_html=True)
 
 
 def render_current_session(event):
