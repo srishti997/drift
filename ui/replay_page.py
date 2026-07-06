@@ -18,22 +18,21 @@ def render_replay_page(api, empty):
         return
 
     events = replay.get("events", [])
-    total = len(events)
 
-    if "playback_index" not in st.session_state:
-        st.session_state.playback_index = 0
+    initialize_state()
+    filtered_events = apply_filters(events)
 
-    if "playback_running" not in st.session_state:
-        st.session_state.playback_running = False
+    if not filtered_events:
+        st.warning("No sessions match your filters.")
+        return
 
-    if "playback_speed" not in st.session_state:
-        st.session_state.playback_speed = 1
-
+    total = len(filtered_events)
     current_index = min(st.session_state.playback_index, total - 1)
-    current = events[current_index]
+    current = filtered_events[current_index]
 
     render_summary(replay)
-    render_stats(replay)
+    render_stats(filtered_events, replay)
+    render_filters(events)
     render_controls(total, current_index)
 
     progress = int(((current_index + 1) / total) * 100)
@@ -47,18 +46,24 @@ def render_replay_page(api, empty):
     </div>
     """, unsafe_allow_html=True)
 
-    for index, event in enumerate(events):
+    for index, event in enumerate(filtered_events):
         render_timeline_row(event, index, current_index)
 
-    if st.session_state.playback_running:
-        if current_index < total - 1:
-            delay = 1.2 / st.session_state.playback_speed
-            time.sleep(delay)
-            st.session_state.playback_index = current_index + 1
-            st.rerun()
-        else:
-            st.session_state.playback_running = False
-            st.rerun()
+    handle_auto_play(total, current_index)
+
+
+def initialize_state():
+    defaults = {
+        "playback_index": 0,
+        "playback_running": False,
+        "playback_speed": 1,
+        "replay_filter": "All",
+        "replay_search": "",
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 
 def render_summary(replay):
@@ -72,14 +77,28 @@ def render_summary(replay):
     """, unsafe_allow_html=True)
 
 
-def render_stats(replay):
+def render_stats(events, replay):
+    total_sessions = len(events)
+
+    longest = max(events, key=lambda e: e.get("duration_minutes", 0))
+    longest_focus = max(
+        [e for e in events if e.get("event_type") in ["start", "focused", "recovered"]],
+        key=lambda e: e.get("duration_minutes", 0),
+        default={}
+    )
+    longest_distraction = max(
+        [e for e in events if e.get("is_distraction")],
+        key=lambda e: e.get("duration_minutes", 0),
+        default={}
+    )
+
     c1, c2, c3, c4 = st.columns(4)
 
     cards = [
-        ("Total Time", f"{replay.get('total_minutes', 0)} min", "tracked"),
-        ("Top Mission", replay.get("top_mission", "Unknown"), "dominant"),
-        ("Focus Lost", replay.get("focus_lost_events", 0), "events"),
-        ("Recovered", replay.get("recovery_events", 0), "events"),
+        ("Sessions", total_sessions, "filtered"),
+        ("Longest Session", f"{longest.get('duration_minutes', 0)} min", longest.get("activity_type", "—")),
+        ("Longest Focus", f"{longest_focus.get('duration_minutes', 0)} min", longest_focus.get("mission", "—")),
+        ("Longest Drift", f"{longest_distraction.get('duration_minutes', 0)} min", longest_distraction.get("activity_type", "—")),
     ]
 
     for col, (label, value, sub) in zip([c1, c2, c3, c4], cards):
@@ -91,6 +110,89 @@ def render_stats(replay):
                 <div class="stat-sub">{sub}</div>
             </div>
             """, unsafe_allow_html=True)
+
+
+def render_filters(events):
+    st.write("")
+
+    filter_options = ["All", "Focused", "Focus Lost", "Recovered"]
+
+    activity_types = sorted(
+        list(set(event.get("activity_type", "Unknown") for event in events))
+    )
+
+    filter_options.extend(activity_types)
+
+    c1, c2 = st.columns([1, 2])
+
+    with c1:
+        selected_filter = st.selectbox(
+            "Filter sessions",
+            filter_options,
+            index=filter_options.index(st.session_state.replay_filter)
+            if st.session_state.replay_filter in filter_options else 0,
+        )
+
+    with c2:
+        search = st.text_input(
+            "Search sessions",
+            value=st.session_state.replay_search,
+            placeholder="Search mission, story, activity..."
+        )
+
+    if selected_filter != st.session_state.replay_filter:
+        st.session_state.replay_filter = selected_filter
+        st.session_state.playback_index = 0
+        st.session_state.playback_running = False
+        st.rerun()
+
+    if search != st.session_state.replay_search:
+        st.session_state.replay_search = search
+        st.session_state.playback_index = 0
+        st.session_state.playback_running = False
+        st.rerun()
+
+
+def apply_filters(events):
+    selected_filter = st.session_state.get("replay_filter", "All")
+    search = st.session_state.get("replay_search", "").lower().strip()
+
+    filtered = events
+
+    if selected_filter == "Focused":
+        filtered = [
+            e for e in filtered
+            if e.get("event_type") in ["start", "focused"]
+        ]
+
+    elif selected_filter == "Focus Lost":
+        filtered = [
+            e for e in filtered
+            if e.get("event_type") == "focus_lost"
+        ]
+
+    elif selected_filter == "Recovered":
+        filtered = [
+            e for e in filtered
+            if e.get("event_type") == "recovered"
+        ]
+
+    elif selected_filter != "All":
+        filtered = [
+            e for e in filtered
+            if e.get("activity_type") == selected_filter
+        ]
+
+    if search:
+        filtered = [
+            e for e in filtered
+            if search in str(e.get("mission", "")).lower()
+            or search in str(e.get("story", "")).lower()
+            or search in str(e.get("activity_type", "")).lower()
+            or search in str(e.get("event_type", "")).lower()
+        ]
+
+    return filtered
 
 
 def render_controls(total, current_index):
@@ -192,34 +294,68 @@ def render_timeline_row(event, index, current_index):
     active_border = color if index == current_index else "rgba(148,163,184,.08)"
     active_bg = "rgba(34,211,238,.06)" if index == current_index else "rgba(20,30,50,.45)"
 
-    st.markdown(f"""
-    <div style="
-        background:{active_bg};
-        border:1px solid {active_border};
-        border-left:4px solid {color};
-        border-radius:14px;
-        padding:14px 18px;
-        margin-bottom:10px;
-    ">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-                <div style="font-size:12px;color:{color};font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">
+    with st.expander(
+        f"{icon} {label} · {event.get('mission', 'Unknown')} · {event.get('duration_minutes', 0)} min",
+        expanded=(index == current_index)
+    ):
+        st.markdown(f"""
+        <div style="
+            background:{active_bg};
+            border:1px solid {active_border};
+            border-left:4px solid {color};
+            border-radius:14px;
+            padding:16px 18px;
+            margin-bottom:8px;
+        ">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <div style="font-size:12px;color:{color};font-weight:800;letter-spacing:.08em;text-transform:uppercase;">
                     {icon} {label}
                 </div>
-                <div style="font-size:16px;color:#E2E8F0;font-weight:700;">
-                    {event.get("mission", "Unknown")}
-                </div>
-                <div style="font-size:13px;color:#64748B;margin-top:4px;">
-                    {event.get("story", "")}
+                <div style="font-family:'JetBrains Mono',monospace;color:#64748B;font-size:12px;">
+                    {event.get("time", "—")} · {event.get("duration_minutes", 0)} min
                 </div>
             </div>
-            <div style="text-align:right;font-family:'JetBrains Mono',monospace;color:#64748B;font-size:12px;">
-                <div>{event.get("time", "—")}</div>
-                <div>{event.get("duration_minutes", 0)} min</div>
+
+            <div style="font-size:18px;color:#E2E8F0;font-weight:800;margin-bottom:8px;">
+                {event.get("mission", "Unknown")}
+            </div>
+
+            <div style="font-size:14px;color:#94A3B8;line-height:1.6;margin-bottom:12px;">
+                {event.get("story", "")}
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;">
+                <div class="stat-tile">
+                    <div class="stat-label">Activity</div>
+                    <div class="stat-value" style="font-size:16px;">{event.get("activity_type", "Unknown")}</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-label">Event</div>
+                    <div class="stat-value" style="font-size:16px;">{event.get("event_type", "Unknown")}</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-label">Duration</div>
+                    <div class="stat-value" style="font-size:16px;">{event.get("duration_minutes", 0)}m</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-label">Distraction</div>
+                    <div class="stat-value" style="font-size:16px;">{str(event.get("is_distraction", False))}</div>
+                </div>
             </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+
+
+def handle_auto_play(total, current_index):
+    if st.session_state.playback_running:
+        if current_index < total - 1:
+            delay = 1.2 / st.session_state.playback_speed
+            time.sleep(delay)
+            st.session_state.playback_index = current_index + 1
+            st.rerun()
+        else:
+            st.session_state.playback_running = False
+            st.rerun()
 
 
 def get_event_style(event_type):
