@@ -2,6 +2,9 @@ import time
 import streamlit as st
 
 
+PRODUCTIVE_ACTIVITY_TYPES = {"CODING", "BROWSING", "COMMUNICATION"}
+
+
 def render_replay_page(api, empty):
     replay = api("/replay")
 
@@ -84,13 +87,14 @@ def render_stats(events):
 
     productive_sessions = [
         e for e in events
-        if e.get("activity_type") in ["CODING", "BROWSING", "COMMUNICATION"]
+        if e.get("activity_type") in PRODUCTIVE_ACTIVITY_TYPES
         and not e.get("is_distraction", False)
     ]
 
     drift_sessions = [
         e for e in events
-        if e.get("event_type") == "focus_lost" or e.get("is_distraction", False)
+        if e.get("event_type") == "focus_lost"
+        or e.get("is_distraction", False)
     ]
 
     recovered_sessions = [
@@ -110,12 +114,15 @@ def render_stats(events):
 
     recovery_rate = 0
     if drift_sessions:
-        recovery_rate = round((len(recovered_sessions) / len(drift_sessions)) * 100, 1)
+        recovery_rate = round(
+            (len(recovered_sessions) / len(drift_sessions)) * 100,
+            1
+        )
 
     c1, c2, c3, c4 = st.columns(4)
 
     cards = [
-        ("Sessions", total_sessions, "filtered"),
+        ("Total Sessions", total_sessions, "replay blocks"),
         ("Productive Time", f"{productive_minutes} min", "focused work"),
         ("Drift Time", f"{drift_minutes} min", "lost focus"),
         ("Recovery Rate", f"{recovery_rate}%", "recoveries / drifts"),
@@ -236,6 +243,7 @@ def render_controls(total, current_index):
             if st.button("▶ Auto Play", use_container_width=True):
                 if current_index >= total - 1:
                     st.session_state.playback_index = 0
+
                 st.session_state.playback_running = True
                 st.rerun()
 
@@ -292,7 +300,11 @@ def render_replay_map(events, current_index):
         event_type = event.get("event_type", "focused")
         _, _, color = get_event_style(event_type)
 
-        width = max((event.get("duration_minutes", 0) / total_minutes) * 100, 0.6)
+        width = max(
+            (event.get("duration_minutes", 0) / total_minutes) * 100,
+            0.6
+        )
+
         opacity = "1" if index == current_index else "0.45"
         border = "2px solid #F8FAFC" if index == current_index else "none"
 
@@ -343,12 +355,15 @@ def render_current_session(event):
         <div style="font-size:13px;color:{color};font-weight:900;letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px;">
             {icon} {label}
         </div>
+
         <div style="font-size:38px;font-weight:900;color:#F1F5F9;margin-bottom:10px;">
             {event.get("mission", "Unknown")}
         </div>
+
         <div style="font-size:16px;color:#94A3B8;line-height:1.7;margin-bottom:18px;">
             {event.get("story", "")}
         </div>
+
         <div style="font-size:12px;color:#64748B;">
             {event.get("time", "—")} · {event.get("duration_minutes", 0)} min · {event.get("activity_type", "Unknown")}
         </div>
@@ -398,14 +413,17 @@ def render_timeline_row(event, index, current_index):
                     <div class="stat-label">Activity</div>
                     <div class="stat-value" style="font-size:16px;">{event.get("activity_type", "Unknown")}</div>
                 </div>
+
                 <div class="stat-tile">
                     <div class="stat-label">Event</div>
                     <div class="stat-value" style="font-size:16px;">{event.get("event_type", "Unknown")}</div>
                 </div>
+
                 <div class="stat-tile">
                     <div class="stat-label">Duration</div>
                     <div class="stat-value" style="font-size:16px;">{event.get("duration_minutes", 0)}m</div>
                 </div>
+
                 <div class="stat-tile">
                     <div class="stat-label">Distraction</div>
                     <div class="stat-value" style="font-size:16px;">{str(event.get("is_distraction", False))}</div>
