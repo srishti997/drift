@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 from ui.replay_page import render_replay_page
+import textwrap
 
 API_BASE_URL = "http://127.0.0.1:8000"
 USERS_FILE = "data/users.json"
@@ -258,143 +259,178 @@ def render_sidebar(alive):
 # ── Page 1: Overview ──────────────────────────────────────────────────────────
 
 def render_overview():
-    score    = api("/score")
-    missions = api("/missions")
-    dw       = api("/deep-work")
-    report   = api("/daily-report")
-    drift    = api("/drift")
-    coach    = api("/coach")
-    predict  = api("/predict")
+    score = api("/score") or {}
+    missions = api("/missions") or {}
+    dw = api("/deep-work") or {}
+    report = api("/daily-report") or {}
+    drift = api("/drift") or {}
+    coach = api("/coach") or {}
 
-    overall     = score.get("overall_score",0) if score else 0
-    grade       = score.get("grade","N/A") if score else "N/A"
-    focus_s     = score.get("focus_score",0) if score else 0
-    mission_s   = score.get("mission_score",0) if score else 0
-    recovery_s  = score.get("recovery_score",0) if score else 0
-    switch_s    = score.get("switch_score",0) if score else 0
-    summary_txt = score.get("summary","") if score else ""
-    deep_min    = dw.get("total_deep_work_minutes",0) if dw else 0
-    deep_sess   = dw.get("count",0) if dw else 0
-    ctx         = report.get("context_switches",0) if report else 0
-    top_m       = report.get("top_mission","—") if report else "—"
-    drift_idx   = drift.get("drift_index",0) if drift else 0
-    prod_min    = (drift.get("productive_time",0)//60) if drift else 0
-    focus_ratio = drift.get("focus_score",0) if drift else 0
+    overall = score.get("overall_score", 0)
+    grade = score.get("grade", "N/A")
+    focus_s = score.get("focus_score", 0)
+    mission_s = score.get("mission_score", 0)
+    recovery_s = score.get("recovery_score", 0)
+    switch_s = score.get("switch_score", 0)
+
+    deep_min = dw.get("total_deep_work_minutes", 0)
+    deep_sess = dw.get("count", 0)
+
+    ctx = report.get("context_switches", 0)
+    top_m = report.get("top_mission", "—")
+
+    drift_idx = drift.get("drift_index", 0)
+    prod_min = drift.get("productive_time", 0) // 60 if drift else 0
+    focus_ratio = drift.get("focus_score", 0)
 
     fname = st.session_state.display_name.split()[0] if st.session_state.display_name else "there"
-    hour  = datetime.now().hour
-    gr    = "Good morning" if hour<12 else ("Good afternoon" if hour<17 else "Good evening")
+    hour = datetime.now().hour
+    greeting = "Good morning" if hour < 12 else ("Good afternoon" if hour < 17 else "Good evening")
 
-    st.markdown(f"""
-    <div style="margin-bottom:24px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#22D3EE;text-transform:uppercase;margin-bottom:6px;">Overview</div>
-        <div class="page-title">{gr}, {fname}.</div>
-        <div class="page-sub">Here's how your focus held up today.</div>
-    </div>""", unsafe_allow_html=True)
+    st.markdown(
+        f"""
+<div style="background:linear-gradient(135deg,rgba(34,211,238,.12),rgba(129,140,248,.08));border:1px solid rgba(34,211,238,.22);border-radius:26px;padding:34px;margin-bottom:24px;box-shadow:0 0 60px rgba(34,211,238,.06);">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#22D3EE;margin-bottom:10px;">Overview</div>
+    <div style="display:flex;justify-content:space-between;gap:28px;align-items:center;">
+        <div>
+            <div style="font-size:36px;font-weight:900;color:#F8FAFC;margin-bottom:8px;">{greeting}, {fname} 👋</div>
+            <div style="font-size:15px;color:#94A3B8;line-height:1.7;max-width:650px;">
+                Your focus held for <b style="color:#22D3EE;">{prod_min} minutes</b> today.
+                Main mission: <b style="color:#F8FAFC;">{top_m}</b>.
+                You recorded <b style="color:#F8FAFC;">{ctx}</b> context switches.
+            </div>
+        </div>
+        <div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(#22D3EE {overall * 3.6}deg, rgba(30,41,59,.9) 0deg);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 40px rgba(34,211,238,.14);">
+            <div style="width:118px;height:118px;border-radius:50%;background:#0B1120;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+                <div style="font-size:42px;font-weight:900;font-family:'JetBrains Mono',monospace;color:#F8FAFC;">{overall}</div>
+                <div style="font-size:11px;color:#22D3EE;font-weight:800;letter-spacing:.1em;">Grade {grade}</div>
+            </div>
+        </div>
+    </div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Row 1: Score · Breakdown · Drift
-    c1, c2, c3 = st.columns([1,1.5,1])
-    with c1:
-        st.markdown(f"""
-        <div class="card-cyan" style="text-align:center;padding:32px 16px;">
-            <div class="eyebrow" style="text-align:center;">Productivity Score</div>
-            <div class="score-big">{overall}</div>
-            <div class="grade-pill">Grade {grade}</div>
-            <div style="font-size:12px;color:#475569;margin-top:14px;line-height:1.5;">{summary_txt}</div>
-        </div>""", unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
 
-    with c2:
-        bars = [("Focus",focus_s,"linear-gradient(90deg,#0891B2,#22D3EE)"),
-                ("Mission Alignment",mission_s,"linear-gradient(90deg,#4338CA,#818CF8)"),
-                ("Recovery",recovery_s,"linear-gradient(90deg,#059669,#34D399)"),
-                ("Switch Control",switch_s,"linear-gradient(90deg,#C2410C,#FB923C)")]
-        html = '<div class="card"><div class="eyebrow">Score Breakdown</div>'
-        for lbl,val,grad in bars:
-            html += f'<div class="bar-wrap"><div class="bar-row"><span>{lbl}</span><span class="bar-val">{val}</span></div><div class="bar-track"><div class="bar-fill" style="width:{val}%;background:{grad};"></div></div></div>'
-        html += "</div>"
-        st.markdown(html, unsafe_allow_html=True)
+    stats = [
+        ("Productive Time", f"{prod_min} min", f"{focus_ratio}% focus ratio"),
+        ("Deep Work", f"{deep_min} min", f"{deep_sess} sessions"),
+        ("Context Switches", str(ctx), "goal changes"),
+        ("Drift Index", str(drift_idx), "lower is better"),
+    ]
 
-    with c3:
-        if drift_idx<25:   dc,dl,de="db-green","Stable","🟢"
-        elif drift_idx<50: dc,dl,de="db-yellow","Minor Drift","🟡"
-        elif drift_idx<75: dc,dl,de="db-orange","Significant","🟠"
-        else:              dc,dl,de="db-red","Critical","🔴"
-        st.markdown(f"""
-        <div class="card" style="text-align:center;padding:32px 16px;">
-            <div class="eyebrow" style="text-align:center;">Drift Index</div>
-            <div class="drift-num" style="color:#F1F5F9;">{drift_idx}</div>
-            <div><span class="dbadge {dc}">{de} {dl}</span></div>
-            <div style="font-size:11px;color:#334155;margin-top:12px;">Fragmentation · lower is better</div>
-        </div>""", unsafe_allow_html=True)
-
-    # Row 2: Stat tiles
-    t1,t2,t3,t4 = st.columns(4)
-    for col,lbl,val,sub in [
-        (t1,"Deep Work",f"{deep_min} min",f"{deep_sess} session{'s' if deep_sess!=1 else ''}"),
-        (t2,"Context Switches",str(ctx),"goal changes today"),
-        (t3,"Top Mission",top_m,"primary focus area"),
-        (t4,"Productive Time",f"{prod_min} min",f"{focus_ratio}% focus ratio"),
-    ]:
+    for col, (label, value, sub) in zip([c1, c2, c3, c4], stats):
         with col:
-            st.markdown(f'<div class="stat-tile"><div class="stat-label">{lbl}</div><div class="stat-value">{val}</div><div class="stat-sub">{sub}</div></div>',
-                        unsafe_allow_html=True)
+            st.markdown(
+                f"""
+<div class="stat-tile">
+    <div class="stat-label">{label}</div>
+    <div class="stat-value">{value}</div>
+    <div class="stat-sub">{sub}</div>
+</div>
+                """,
+                unsafe_allow_html=True,
+            )
 
     st.write("")
 
-    # Row 3: Prediction banner
-    if predict:
-        rl    = predict.get("risk_level","LOW")
-        rs    = predict.get("risk_score",0)
-        sp    = int(predict.get("success_probability",1)*100)
-        pred  = predict.get("prediction","")
-        pr    = predict.get("primary_risk","")
-        rc    = {"LOW":"risk-low","MEDIUM":"risk-med","HIGH":"risk-high","CRITICAL":"risk-crit"}.get(rl,"risk-low")
-        bcolor= {"LOW":"rgba(5,150,105,.08)","MEDIUM":"rgba(217,119,6,.08)",
-                 "HIGH":"rgba(234,88,12,.08)","CRITICAL":"rgba(185,28,28,.08)"}.get(rl,"rgba(5,150,105,.08)")
-        bcol2 = {"LOW":"rgba(5,150,105,.2)","MEDIUM":"rgba(217,119,6,.2)",
-                 "HIGH":"rgba(234,88,12,.2)","CRITICAL":"rgba(185,28,28,.2)"}.get(rl,"rgba(5,150,105,.2)")
-        st.markdown(f"""
-        <div style="background:{bcolor};border:1px solid {bcol2};border-radius:16px;padding:18px 24px;margin-bottom:18px;display:flex;align-items:center;gap:20px;">
-            <div>
-                <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748B;margin-bottom:4px;">Drift Risk Prediction</div>
-                <div style="font-size:14px;color:#CBD5E1;line-height:1.5;">{pred}</div>
-                <div style="font-size:12px;color:#475569;margin-top:4px;">{pr}</div>
-            </div>
-            <div style="text-align:center;flex-shrink:0;">
-                <div style="font-size:32px;font-weight:900;font-family:'JetBrains Mono',monospace;color:#F1F5F9;">{sp}%</div>
-                <div style="font-size:11px;color:#475569;">success prob.</div>
-                <span class="risk-pill {rc}" style="margin-top:6px;">{rl}</span>
-            </div>
-        </div>""", unsafe_allow_html=True)
+    left, right = st.columns([1.4, 1])
 
-    # Row 4: Mission pie + Coach
-    cp,cc = st.columns([1.2,1])
-    with cp:
-        st.markdown('<div class="card"><div class="eyebrow">Mission Breakdown</div>', unsafe_allow_html=True)
-        items = missions.get("missions",[]) if missions else []
-        if items:
-            df  = pd.DataFrame(items)
-            fig = px.pie(df,names="mission",values="time_seconds",hole=0.52,
-                         color_discrete_sequence=["#22D3EE","#818CF8","#34D399","#FB923C","#F472B6","#FBBF24"])
-            fig.update_traces(textposition="inside",textinfo="percent+label",textfont=dict(color="white",size=11))
-            fig.update_layout(height=280,paper_bgcolor="rgba(0,0,0,0)",font_color="white",
-                              showlegend=False,margin=dict(l=0,r=0,t=0,b=0))
-            st.plotly_chart(fig,use_container_width=True)
-        else: empty("No mission data yet — run the tracker first.")
-        st.markdown("</div>", unsafe_allow_html=True)
+    with left:
+        bars = [
+            ("Focus", focus_s, "#22D3EE"),
+            ("Mission Alignment", mission_s, "#818CF8"),
+            ("Recovery", recovery_s, "#34D399"),
+            ("Switch Control", switch_s, "#FB923C"),
+        ]
 
-    with cc:
-        st.markdown('<div class="card"><div class="eyebrow">AI Coach</div>', unsafe_allow_html=True)
-        advice = coach.get("advice",[]) if coach else []
+        html = '<div class="card"><div class="eyebrow">Score Breakdown</div>'
+
+        for label, value, color in bars:
+            html += f"""
+<div style="margin-bottom:18px;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:13px;color:#94A3B8;">
+        <span>{label}</span>
+        <span style="font-family:'JetBrains Mono',monospace;color:#E2E8F0;font-weight:700;">{value}%</span>
+    </div>
+    <div style="height:9px;background:rgba(30,41,59,.9);border-radius:999px;overflow:hidden;">
+        <div style="height:100%;width:{value}%;background:{color};border-radius:999px;"></div>
+    </div>
+</div>
+            """
+
+        html += "</div>"
+        st.markdown(html, unsafe_allow_html=True)
+
+    with right:
+        advice = coach.get("advice", []) if coach else []
+
+        st.markdown(
+            '<div class="card-cyan"><div class="eyebrow">AI Coach</div>',
+            unsafe_allow_html=True,
+        )
+
         if advice:
-            for item in advice[:3]:
-                st.markdown(f"""
-                <div class="coach-card">
-                    <div class="coach-lbl">Observation</div><div class="coach-txt">{item.get('observation','')}</div>
-                    <div class="coach-lbl">Suggestion</div><div class="coach-txt" style="margin-bottom:0">{item.get('suggestion','')}</div>
-                </div>""", unsafe_allow_html=True)
-        else: empty("No coaching advice yet.")
+            item = advice[0]
+            observation = item.get("observation", "Your day has been analysed.")
+            impact = item.get("impact", "")
+            suggestion = item.get(
+                "suggestion",
+                "Keep your next session focused and avoid unnecessary context switches.",
+            )
+
+            st.markdown(
+                f"""
+<div style="font-size:16px;color:#F8FAFC;font-weight:800;margin-bottom:10px;">{observation}</div>
+<div style="font-size:14px;color:#94A3B8;line-height:1.7;margin-bottom:16px;">{impact}</div>
+<div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.18);border-radius:14px;padding:14px;color:#CBD5E1;font-size:14px;line-height:1.6;">
+    💡 {suggestion}
+</div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            empty("Start tracking to unlock AI coaching.")
+
         st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="card"><div class="eyebrow">Mission Distribution</div>',
+        unsafe_allow_html=True,
+    )
+
+    items = missions.get("missions", []) if missions else []
+
+    if items:
+        total_time = sum(i.get("time_seconds", 0) for i in items) or 1
+
+        for item in sorted(items, key=lambda x: x.get("time_seconds", 0), reverse=True)[:6]:
+            mission = item.get("mission", "Unknown")
+            seconds = item.get("time_seconds", 0)
+            pct = round((seconds / total_time) * 100)
+            mins = round(seconds / 60, 1)
+            color = mcolor(mission)
+
+            st.markdown(
+                f"""
+<div style="margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#CBD5E1;margin-bottom:6px;">
+        <span>{mission}</span>
+        <span>{mins} min · {pct}%</span>
+    </div>
+    <div style="height:9px;background:rgba(30,41,59,.9);border-radius:999px;overflow:hidden;">
+        <div style="height:100%;width:{pct}%;background:{color};border-radius:999px;"></div>
+    </div>
+</div>
+                """,
+                unsafe_allow_html=True,
+            )
+    else:
+        empty("🚀 Start the tracker to unlock mission insights.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ── Page 2: Deep Dive ─────────────────────────────────────────────────────────
 
