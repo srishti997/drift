@@ -435,134 +435,270 @@ def render_overview():
 # ── Page 2: Deep Dive ─────────────────────────────────────────────────────────
 
 def render_deep_dive():
-    timeline = api("/timeline")
-    dw       = api("/deep-work")
-    switches = api("/context-switches")
-    patterns = api("/patterns")
-    recovery = api("/recovery-cost")
+    timeline = api("/timeline") or {}
+    dw = api("/deep-work") or {}
+    switches = api("/context-switches") or {}
+    patterns = api("/patterns") or {}
+    recovery = api("/recovery-cost") or {}
+    replay = api("/replay") or {}
+    missions = api("/missions") or {}
 
-    st.markdown("""
-    <div style="margin-bottom:24px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#22D3EE;text-transform:uppercase;margin-bottom:6px;">Deep Dive</div>
-        <div class="page-title">What actually happened.</div>
-        <div class="page-sub">Session-by-session breakdown of your focus, intent, and context switching.</div>
-    </div>""", unsafe_allow_html=True)
+    st.markdown(
+        """
+<div style="margin-bottom:24px;">
+<div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#22D3EE;text-transform:uppercase;margin-bottom:6px;">Deep Dive</div>
+<div class="page-title">What actually happened.</div>
+<div class="page-sub">Visual breakdown of focus, context switching, recovery, and session behavior.</div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Deep Work Sessions
-    st.markdown('<div class="card"><div class="eyebrow">Deep Work Sessions</div>', unsafe_allow_html=True)
-    sessions = dw.get("sessions",[]) if dw else []
-    if sessions:
-        for i,s in enumerate(sessions):
-            dur    = round(s.get("duration_seconds",0)/60,1)
-            intent = s.get("dominant_intent","—")
-            apps   = ", ".join(list(s.get("apps",{}).keys())[:3]) or "—"
-            start  = s.get("start_time","")[:16].replace("T","  ") if s.get("start_time") else "—"
-            st.markdown(f"""
-            <div class="dw-row">
-                <div class="dw-num">#{i+1}</div>
-                <div style="flex:1;"><div class="dw-intent">{intent}</div><div class="dw-meta">{start} · {apps}</div></div>
-                <div style="text-align:right;"><div class="dw-dur">{dur}m</div><div style="font-size:10px;color:#334155;">uninterrupted</div></div>
-            </div>""", unsafe_allow_html=True)
-    else: empty("No deep work sessions yet. Aim for 30+ uninterrupted minutes.")
-    st.markdown("</div>", unsafe_allow_html=True)
+    deep_minutes = dw.get("total_deep_work_minutes", 0)
+    deep_sessions = dw.get("count", len(dw.get("sessions", [])))
+    deep_goal = 240
+    deep_progress = min(100, round((deep_minutes / deep_goal) * 100))
 
-    sc,sp = st.columns(2)
+    total_switches = switches.get("total_switches", 0)
+    distraction_switches = switches.get("distraction_switches", 0)
+    focus_loss_minutes = round(switches.get("estimated_focus_loss_seconds", 0) / 60, 1)
 
-    with sc:
-        st.markdown('<div class="card"><div class="eyebrow">Context Switch Analysis</div>', unsafe_allow_html=True)
-        if switches:
-            total   = switches.get("total_switches",0)
-            distrac = switches.get("distraction_switches",0)
-            goal_sw = switches.get("goal_aligned_switches",switches.get("goal_switches",0))
-            loss_m  = round(switches.get("estimated_focus_loss_seconds",0)/60,1)
-            for lbl,val,col in [
-                ("Total Switches",total,"#F1F5F9"),("Distraction Switches",distrac,"#F87171"),
-                ("Goal-Aligned",goal_sw,"#34D399"),("Est. Focus Lost",f"{loss_m} min","#FBBF24"),
-            ]:
-                st.markdown(f'<div class="sw-row"><span>{lbl}</span><span class="sw-val" style="color:{col};">{val}</span></div>',
-                            unsafe_allow_html=True)
-            if switches.get("insight"):
-                st.markdown(f"<div style='font-size:12px;color:#475569;margin-top:12px;'>{switches['insight']}</div>",
-                            unsafe_allow_html=True)
-            sw_list = switches.get("switches",[])
-            if sw_list:
-                st.markdown("<div style='margin-top:16px;'><div class='eyebrow'>Recent Switch Flow</div>", unsafe_allow_html=True)
-                for sw in sw_list[-6:]:
-                    c = "#F87171" if sw.get("is_distraction") else "#34D399"
-                    a = "⚡" if sw.get("is_distraction") else "→"
-                    st.markdown(f"""
-                    <div style="font-size:11px;padding:5px 0;border-bottom:1px solid rgba(148,163,184,.05);display:flex;gap:6px;align-items:center;">
-                        <span style="color:#64748B;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{sw.get('from_goal','?')}</span>
-                        <span style="color:{c};">{a}</span>
-                        <span style="color:{c};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;">{sw.get('to_goal','?')}</span>
-                    </div>""", unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-        else: empty("No switch data yet.")
+    left, right = st.columns(2)
+
+    with left:
+        st.markdown(
+            f"""
+<div class="card-cyan">
+<div class="eyebrow">Today's Deep Work</div>
+<div style="font-size:44px;font-weight:900;color:#F8FAFC;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">{deep_minutes} min</div>
+<div style="font-size:13px;color:#64748B;margin-bottom:12px;">{deep_sessions} deep work session(s) · Goal: {deep_goal} min</div>
+<div class="bar-track" style="height:10px;">
+<div class="bar-fill" style="width:{deep_progress}%;background:linear-gradient(90deg,#22D3EE,#34D399);"></div>
+</div>
+<div style="font-size:12px;color:#475569;margin-top:10px;">{deep_progress}% of daily deep work target completed</div>
+</div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with right:
+        st.markdown('<div class="card"><div class="eyebrow">Context Switch Timeline</div>', unsafe_allow_html=True)
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total", total_switches)
+        c2.metric("Distraction", distraction_switches)
+        c3.metric("Focus Lost", f"{focus_loss_minutes} min")
+
+        switch_density = min(40, total_switches)
+        switch_timeline = "".join(["●" if i < switch_density else "─" for i in range(40)])
+
+        st.markdown(
+            f"""
+<div style="font-size:20px;letter-spacing:2px;font-family:'JetBrains Mono',monospace;color:#FB923C;word-break:break-all;margin-top:12px;">
+{switch_timeline}
+</div>
+</div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    mission_items = missions.get("missions", []) if missions else []
+    replay_events = replay.get("events", []) if replay else []
+
+    left, right = st.columns([1.1, 1])
+
+    with left:
+        st.markdown('<div class="card"><div class="eyebrow">Mission Analytics</div>', unsafe_allow_html=True)
+
+        if mission_items:
+            total_time = sum(item.get("time_seconds", 0) for item in mission_items) or 1
+
+            for item in sorted(mission_items, key=lambda x: x.get("time_seconds", 0), reverse=True)[:7]:
+                mission = item.get("mission", "Unknown")
+                seconds = item.get("time_seconds", 0)
+                pct = round((seconds / total_time) * 100)
+                mins = round(seconds / 60, 1)
+                color = mcolor(mission)
+
+                st.markdown(
+                    f"""
+<div style="margin-bottom:18px;">
+<div style="display:flex;justify-content:space-between;font-size:13px;color:#CBD5E1;margin-bottom:6px;">
+<span>{mission}</span>
+<span>{mins} min · {pct}%</span>
+</div>
+<div class="bar-track" style="height:9px;">
+<div class="bar-fill" style="width:{pct}%;background:{color};"></div>
+</div>
+</div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+        else:
+            empty("No mission analytics yet. Run the tracker for a few minutes.")
+
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with sp:
+    with right:
+        st.markdown('<div class="card-purple"><div class="eyebrow">Daily Focus Heatmap</div>', unsafe_allow_html=True)
+
+        if replay_events:
+            cols = st.columns(20)
+
+            color_map = {
+                "start": "#22D3EE",
+                "focused": "#818CF8",
+                "recovered": "#34D399",
+                "focus_lost": "#F87171",
+            }
+
+            for i, event in enumerate(replay_events[:120]):
+                event_type = event.get("event_type", "focused")
+                color = color_map.get(event_type, "#64748B")
+
+                with cols[i % 20]:
+                    st.markdown(
+                        f"""
+<div style="width:14px;height:14px;border-radius:4px;background:{color};margin-bottom:8px;"></div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+            st.caption("🚀 Start · 💻 Focused · ✅ Recovered · ⚠️ Focus Lost")
+        else:
+            empty("No focus heatmap data yet.")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    left, right = st.columns(2)
+
+    with left:
         st.markdown('<div class="card"><div class="eyebrow">Behavioral Patterns</div>', unsafe_allow_html=True)
-        pats = patterns.get("patterns",[]) if patterns else []
-        icons = {"Mission Abandonment":"⚠️","Mission Recovery":"✅","App Ping-Pong":"🔁","Deep Work":"🔥"}
+
+        pats = patterns.get("patterns", []) if patterns else []
+        icons = {
+            "Mission Abandonment": "⚠️",
+            "Mission Recovery": "✅",
+            "App Ping-Pong": "🔁",
+            "Deep Work": "🔥",
+        }
+
         if pats:
             for p in pats:
-                pt,cnt,desc = p.get("type",""),p.get("count",0),p.get("description","")
-                st.markdown(f"""
-                <div class="pat-row">
-                    <div class="pat-head"><span>{icons.get(pt,'◆')}</span><span class="pat-name">{pt}</span><span class="pat-count">×{cnt}</span></div>
-                    <div class="pat-desc">{desc}</div>
-                </div>""", unsafe_allow_html=True)
+                pt = p.get("type", "Pattern")
+                cnt = p.get("count", 0)
+                desc = p.get("description", "")
+
+                st.markdown(
+                    f"""
+<div class="pat-row">
+<div class="pat-head">
+<span>{icons.get(pt, "◆")}</span>
+<span class="pat-name">{pt}</span>
+<span class="pat-count">×{cnt}</span>
+</div>
+<div class="pat-desc">{desc}</div>
+</div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
             if patterns.get("insight"):
-                st.markdown(f"<div style='font-size:12px;color:#334155;margin-top:12px;'>{patterns['insight']}</div>",
-                            unsafe_allow_html=True)
-        else: empty("No patterns detected yet.")
+                st.markdown(
+                    f"<div style='font-size:12px;color:#475569;margin-top:12px;'>{patterns['insight']}</div>",
+                    unsafe_allow_html=True,
+                )
+        else:
+            empty("No behavioral patterns detected yet.")
+
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Recovery Cost
-    if recovery and recovery.get("count",0) > 0:
+    with right:
+        count = recovery.get("count", 0)
+        total_cost = round(recovery.get("total_recovery_cost_seconds", 0) / 60, 1)
+        avg_cost = round(recovery.get("average_recovery_cost_seconds", 0) / 60, 1)
+        insight = recovery.get("insight", "No recovery insight yet.")
+
         st.markdown('<div class="card-red"><div class="eyebrow">Recovery Cost Analysis</div>', unsafe_allow_html=True)
-        rc1,rc2,rc3 = st.columns(3)
-        for col,lbl,val,sub in [
-            (rc1,"Recovery Events",str(recovery.get("count",0)),"distraction interruptions"),
-            (rc2,"Total Cost",f"{round(recovery.get('total_recovery_cost_seconds',0)/60,1)} min","estimated focus lost"),
-            (rc3,"Avg Cost",f"{round(recovery.get('average_recovery_cost_seconds',0)/60,1)} min","per recovery event"),
-        ]:
-            with col:
-                st.markdown(f'<div class="stat-tile"><div class="stat-label">{lbl}</div><div class="stat-value">{val}</div><div class="stat-sub">{sub}</div></div>',
-                            unsafe_allow_html=True)
-        if recovery.get("insight"):
-            st.markdown(f"<div style='font-size:13px;color:#94A3B8;margin-top:14px;'>{recovery['insight']}</div>",
-                        unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
-    # Cognitive Timeline
-    st.write("")
-    st.markdown('<div class="card"><div class="eyebrow">Cognitive Timeline — click to expand</div>', unsafe_allow_html=True)
-    tl_items = timeline.get("timeline",[]) if timeline else []
+        r1, r2, r3 = st.columns(3)
+        r1.metric("Events", count)
+        r2.metric("Total Cost", f"{total_cost} min")
+        r3.metric("Avg Cost", f"{avg_cost} min")
+
+        st.markdown(
+            f"""
+<div style="font-size:13px;color:#94A3B8;line-height:1.6;margin-top:16px;">
+{insight}
+</div>
+</div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown('<div class="card"><div class="eyebrow">Cognitive Timeline — Click to Expand</div>', unsafe_allow_html=True)
+
+    tl_items = timeline.get("timeline", []) if timeline else []
+
     if tl_items:
         for block in tl_items:
-            mission  = block.get("mission","Unknown")
-            dur_s    = block.get("duration_seconds",0)
-            dur_m    = round(dur_s/60,1)
-            goals    = block.get("goals",{})
-            apps     = block.get("apps",{})
-            color    = mcolor(mission)
-            top_goal = max(goals,key=goals.get) if goals else "—"
-            with st.expander(f"{mission}  ·  {dur_m}m  ·  {top_goal}", expanded=False):
-                g1,g2 = st.columns(2)
+            mission = block.get("mission", "Unknown")
+            dur_s = block.get("duration_seconds", 0)
+            dur_m = round(dur_s / 60, 1)
+            goals = block.get("goals", {})
+            apps = block.get("apps", {})
+            color = mcolor(mission)
+            top_goal = max(goals, key=goals.get) if goals else "—"
+
+            with st.expander(f"{mission} · {dur_m}m · {top_goal}", expanded=False):
+                g1, g2 = st.columns(2)
+
                 with g1:
                     st.markdown("**Goals**")
-                    for g,secs in sorted(goals.items(),key=lambda x:-x[1]):
-                        pct = round(secs/dur_s*100) if dur_s else 0
-                        st.markdown(f"""<div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:12px;color:#94A3B8;margin-bottom:3px;"><span>{g}</span><span>{round(secs/60,1)}m</span></div><div style="background:rgba(30,41,59,.8);border-radius:100px;height:5px;"><div style="width:{pct}%;height:100%;background:{color};border-radius:100px;"></div></div></div>""",
-                                    unsafe_allow_html=True)
+                    if goals:
+                        for g, secs in sorted(goals.items(), key=lambda x: -x[1]):
+                            pct = round(secs / dur_s * 100) if dur_s else 0
+                            st.markdown(
+                                f"""
+<div style="margin-bottom:8px;">
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#94A3B8;margin-bottom:3px;">
+<span>{g}</span>
+<span>{round(secs / 60, 1)}m</span>
+</div>
+<div style="background:rgba(30,41,59,.8);border-radius:100px;height:5px;">
+<div style="width:{pct}%;height:100%;background:{color};border-radius:100px;"></div>
+</div>
+</div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+                    else:
+                        st.caption("No goal breakdown.")
+
                 with g2:
                     st.markdown("**Apps**")
-                    for a,secs in sorted(apps.items(),key=lambda x:-x[1])[:5]:
-                        pct = round(secs/dur_s*100) if dur_s else 0
-                        st.markdown(f"""<div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:12px;color:#94A3B8;margin-bottom:3px;"><span>{a}</span><span>{round(secs/60,1)}m</span></div><div style="background:rgba(30,41,59,.8);border-radius:100px;height:5px;"><div style="width:{pct}%;height:100%;background:{color};border-radius:100px;"></div></div></div>""",
-                                    unsafe_allow_html=True)
-    else: empty("No timeline data yet.")
+                    if apps:
+                        for app, secs in sorted(apps.items(), key=lambda x: -x[1])[:5]:
+                            pct = round(secs / dur_s * 100) if dur_s else 0
+                            st.markdown(
+                                f"""
+<div style="margin-bottom:8px;">
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#94A3B8;margin-bottom:3px;">
+<span>{app}</span>
+<span>{round(secs / 60, 1)}m</span>
+</div>
+<div style="background:rgba(30,41,59,.8);border-radius:100px;height:5px;">
+<div style="width:{pct}%;height:100%;background:{color};border-radius:100px;"></div>
+</div>
+</div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+                    else:
+                        st.caption("No app breakdown.")
+    else:
+        empty("No cognitive timeline data yet.")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ── Page 3: Intelligence ──────────────────────────────────────────────────────
