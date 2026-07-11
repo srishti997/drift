@@ -10,6 +10,7 @@ from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 from ui.replay_page import render_replay_page
 import textwrap
+from ui.replay_page import render_replay_page
 
 API_BASE_URL = "http://127.0.0.1:8000"
 USERS_FILE = "data/users.json"
@@ -1256,122 +1257,580 @@ Success Probability
 # ── Page 4: Daily Report ──────────────────────────────────────────────────────
 
 def render_daily_report():
-    report = api("/daily-report")
-    coach  = api("/coach")
-    score  = api("/score")
-    dw     = api("/deep-work")
+    report = api("/daily-report") or {}
+    coach = api("/coach") or {}
+    score = api("/score") or {}
+    dw = api("/deep-work") or {}
+    drift = api("/drift") or {}
+    recovery = api("/recovery-cost") or {}
+    replay = api("/replay") or {}
 
     today = datetime.now().strftime("%A, %B %d")
-    st.markdown(f"""
-    <div style="margin-bottom:24px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#22D3EE;text-transform:uppercase;margin-bottom:6px;">Daily Report · {today}</div>
-        <div class="page-title">End-of-day intelligence.</div>
-        <div class="page-sub">Your full behavioral summary with AI coaching recommendations.</div>
-    </div>""", unsafe_allow_html=True)
 
-    summary = report.get("executive_summary","No report yet. Run the tracker and check back.") if report else "No data yet."
-    st.markdown(f"""
-    <div class="card-cyan">
-        <div class="eyebrow">Executive Summary</div>
-        <div style="font-size:15px;color:#CBD5E1;line-height:1.75;">{summary}</div>
-    </div>""", unsafe_allow_html=True)
+    overall = score.get("overall_score", 0)
+    grade = score.get("grade", "N/A")
+    focus_score = score.get("focus_score", 0)
+    mission_score = score.get("mission_score", 0)
+    recovery_score = score.get("recovery_score", 0)
+    switch_score = score.get("switch_score", 0)
 
-    overall = score.get("overall_score",0) if score else 0
-    grade   = score.get("grade","—") if score else "—"
-    dw_min  = dw.get("total_deep_work_minutes",0) if dw else 0
-    dw_sess = dw.get("count",0) if dw else 0
-    ctx     = report.get("context_switches",0) if report else 0
-    top_m   = report.get("top_mission","—") if report else "—"
+    deep_minutes = dw.get("total_deep_work_minutes", 0)
+    deep_sessions = dw.get("count", len(dw.get("sessions", [])))
 
-    s1,s2,s3,s4 = st.columns(4)
-    for col,lbl,val,sub in [
-        (s1,"Final Score",f"{overall}/100",f"Grade {grade}"),
-        (s2,"Deep Work",f"{dw_min} min",f"{dw_sess} sessions"),
-        (s3,"Context Switches",str(ctx),"goal changes"),
-        (s4,"Top Mission",top_m,"dominant focus"),
-    ]:
+    context_switches = report.get("context_switches", 0)
+    top_mission = report.get("top_mission", "Unknown")
+    recommendations = report.get("recommendations", [])
+
+    productive_seconds = drift.get("productive_time", 0)
+    productive_minutes = round(productive_seconds / 60, 1)
+    drift_index = drift.get("drift_index", 0)
+
+    recovery_events = recovery.get("count", 0)
+    recovery_cost = round(
+        recovery.get("total_recovery_cost_seconds", 0) / 60,
+        1,
+    )
+
+    replay_events = replay.get("events", [])
+    focus_lost_count = sum(
+        1 for event in replay_events
+        if event.get("event_type") == "focus_lost"
+    )
+    recovered_count = sum(
+        1 for event in replay_events
+        if event.get("event_type") == "recovered"
+    )
+
+    executive_summary = report.get(
+        "executive_summary",
+        (
+            f"You completed {productive_minutes} productive minutes today. "
+            f"Your dominant mission was {top_mission}, with "
+            f"{context_switches} context switches."
+        ),
+    )
+
+    st.markdown(
+        f"""
+<div style="margin-bottom:24px;">
+<div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#22D3EE;text-transform:uppercase;margin-bottom:6px;">
+Daily Report · {today}
+</div>
+<div class="page-title">Your day, decoded.</div>
+<div class="page-sub">
+A complete summary of your productivity, focus quality, recovery, and next steps.
+</div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ── Hero summary ─────────────────────────────────────────────────────
+    score_color = (
+        "#34D399"
+        if overall >= 75
+        else "#FBBF24"
+        if overall >= 50
+        else "#F87171"
+    )
+
+    st.markdown(
+        f"""
+<div style="
+background:linear-gradient(135deg,rgba(34,211,238,.11),rgba(129,140,248,.07));
+border:1px solid rgba(34,211,238,.2);
+border-radius:24px;
+padding:30px;
+margin-bottom:22px;
+">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:28px;">
+<div style="flex:1;">
+<div class="eyebrow">Executive Summary</div>
+<div style="font-size:18px;color:#E2E8F0;line-height:1.75;font-weight:600;">
+{executive_summary}
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;">
+<span class="grade-pill">{productive_minutes} productive min</span>
+<span class="grade-pill">{deep_minutes} deep-work min</span>
+<span class="grade-pill">{context_switches} switches</span>
+<span class="grade-pill">Drift {drift_index}</span>
+</div>
+</div>
+
+<div style="
+width:145px;
+height:145px;
+border-radius:50%;
+background:conic-gradient(
+{score_color} {min(max(overall, 0), 100) * 3.6}deg,
+rgba(30,41,59,.9) 0deg
+);
+display:flex;
+align-items:center;
+justify-content:center;
+flex-shrink:0;
+">
+<div style="
+width:112px;
+height:112px;
+border-radius:50%;
+background:#0B1120;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+">
+<div style="
+font-size:38px;
+font-weight:900;
+font-family:'JetBrains Mono',monospace;
+color:{score_color};
+">
+{overall}
+</div>
+<div style="
+font-size:11px;
+font-weight:800;
+color:#94A3B8;
+letter-spacing:.08em;
+">
+GRADE {grade}
+</div>
+</div>
+</div>
+</div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ── Primary statistics ───────────────────────────────────────────────
+    c1, c2, c3, c4 = st.columns(4)
+
+    stats = [
+        (
+            "Productive Time",
+            f"{productive_minutes} min",
+            f"focus score {focus_score}",
+        ),
+        (
+            "Deep Work",
+            f"{deep_minutes} min",
+            f"{deep_sessions} session(s)",
+        ),
+        (
+            "Focus Lost",
+            str(focus_lost_count),
+            f"{recovered_count} recoveries",
+        ),
+        (
+            "Recovery Cost",
+            f"{recovery_cost} min",
+            f"{recovery_events} event(s)",
+        ),
+    ]
+
+    for col, (label, value, subtitle) in zip(
+        [c1, c2, c3, c4],
+        stats,
+    ):
         with col:
-            st.markdown(f'<div class="stat-tile" style="text-align:center;margin-bottom:18px;"><div class="stat-label">{lbl}</div><div class="stat-value" style="font-size:22px;">{val}</div><div class="stat-sub">{sub}</div></div>',
-                        unsafe_allow_html=True)
+            st.markdown(
+                f"""
+<div class="stat-tile" style="margin-bottom:18px;">
+<div class="stat-label">{label}</div>
+<div class="stat-value" style="font-size:23px;">{value}</div>
+<div class="stat-sub">{subtitle}</div>
+</div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-    rc,lc = st.columns([1,1.4])
-    with rc:
-        st.markdown('<div class="card"><div class="eyebrow">Score Radar</div>', unsafe_allow_html=True)
-        if score:
-            labels = ["Focus","Mission","Recovery","Switch"]
-            vals   = [score.get("focus_score",0),score.get("mission_score",0),
-                      score.get("recovery_score",0),score.get("switch_score",0)]
-            fig = go.Figure(go.Scatterpolar(r=vals+[vals[0]],theta=labels+[labels[0]],
-                fill="toself",fillcolor="rgba(34,211,238,.07)",
-                line=dict(color="#22D3EE",width=2),marker=dict(color="#22D3EE",size=5)))
-            fig.update_layout(
-                polar=dict(bgcolor="rgba(0,0,0,0)",
-                    radialaxis=dict(visible=True,range=[0,100],tickfont=dict(color="#334155",size=9),
-                                    gridcolor="rgba(148,163,184,.08)",linecolor="rgba(148,163,184,.08)"),
-                    angularaxis=dict(tickfont=dict(color="#64748B",size=12),
-                                     gridcolor="rgba(148,163,184,.08)",linecolor="rgba(148,163,184,.08)")),
-                paper_bgcolor="rgba(0,0,0,0)",font_color="white",
-                height=240,margin=dict(l=30,r=30,t=20,b=20),showlegend=False)
-            st.plotly_chart(fig,use_container_width=True)
-        else: empty("No score data.")
+    # ── Score breakdown + AI coach ──────────────────────────────────────
+    left, right = st.columns([1.15, 1])
+
+    with left:
+        score_rows = [
+            ("Focus", focus_score, "#22D3EE"),
+            ("Mission Alignment", mission_score, "#818CF8"),
+            ("Recovery", recovery_score, "#34D399"),
+            ("Switch Control", switch_score, "#FB923C"),
+        ]
+
+        html = """
+<div class="card">
+<div class="eyebrow">Performance Breakdown</div>
+        """
+
+        for label, value, color in score_rows:
+            safe_value = min(max(value, 0), 100)
+
+            html += f"""
+<div style="margin-bottom:19px;">
+<div style="
+display:flex;
+justify-content:space-between;
+font-size:13px;
+color:#94A3B8;
+margin-bottom:7px;
+">
+<span>{label}</span>
+<span style="
+font-family:'JetBrains Mono',monospace;
+font-weight:700;
+color:#E2E8F0;
+">
+{value}%
+</span>
+</div>
+<div style="
+height:9px;
+background:rgba(30,41,59,.9);
+border-radius:999px;
+overflow:hidden;
+">
+<div style="
+width:{safe_value}%;
+height:100%;
+background:{color};
+border-radius:999px;
+"></div>
+</div>
+</div>
+            """
+
+        html += "</div>"
+        st.markdown(html, unsafe_allow_html=True)
+
+    with right:
+        advice = coach.get("advice", [])
+
+        st.markdown(
+            '<div class="card-cyan"><div class="eyebrow">AI Coach</div>',
+            unsafe_allow_html=True,
+        )
+
+        if advice:
+            primary = advice[0]
+
+            st.markdown(
+                f"""
+<div style="
+font-size:18px;
+font-weight:800;
+color:#F8FAFC;
+margin-bottom:12px;
+">
+🎯 Your priority for tomorrow
+</div>
+
+<div style="
+font-size:14px;
+color:#CBD5E1;
+line-height:1.7;
+margin-bottom:12px;
+">
+{primary.get("observation", "Your workday has been analysed.")}
+</div>
+
+<div style="
+font-size:13px;
+color:#64748B;
+line-height:1.7;
+margin-bottom:16px;
+">
+{primary.get("impact", "")}
+</div>
+
+<div style="
+background:rgba(34,211,238,.08);
+border:1px solid rgba(34,211,238,.18);
+border-radius:14px;
+padding:15px;
+font-size:14px;
+color:#E2E8F0;
+line-height:1.65;
+">
+💡 {primary.get("suggestion", "Protect one focused work block tomorrow.")}
+</div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            empty("No coaching advice available yet.")
+
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with lc:
-        ca,cr = st.columns(2)
-        with ca:
-            st.markdown('<div class="card"><div class="eyebrow">AI Coach</div>', unsafe_allow_html=True)
-            advice = coach.get("advice",[]) if coach else []
-            if advice:
-                for item in advice:
-                    st.markdown(f"""
-                    <div class="coach-card">
-                        <div class="coach-lbl">Observation</div><div class="coach-txt">{item.get('observation','')}</div>
-                        <div class="coach-lbl">Impact</div><div class="coach-txt">{item.get('impact','')}</div>
-                        <div class="coach-lbl">Suggestion</div><div class="coach-txt" style="margin-bottom:0">{item.get('suggestion','')}</div>
-                    </div>""", unsafe_allow_html=True)
-            else: empty("No coaching advice yet.")
-            st.markdown("</div>", unsafe_allow_html=True)
+    # ── Mission + recovery story ────────────────────────────────────────
+    left, right = st.columns(2)
 
-        with cr:
-            st.markdown('<div class="card"><div class="eyebrow">Recommendations for Tomorrow</div>', unsafe_allow_html=True)
-            recs = report.get("recommendations",[]) if report else []
-            if recs:
-                for rec in recs:
-                    st.markdown(f'<div class="rec-item"><div class="rec-arrow">→</div><div>{rec}</div></div>',
-                                unsafe_allow_html=True)
-            else: empty("No recommendations yet.")
-            st.markdown("</div>", unsafe_allow_html=True)
+    with left:
+        st.markdown(
+            f"""
+<div class="card-purple">
+<div class="eyebrow">Dominant Mission</div>
+<div style="
+font-size:25px;
+font-weight:900;
+color:#F8FAFC;
+margin-bottom:10px;
+">
+{top_mission}
+</div>
+<div style="
+font-size:13px;
+color:#64748B;
+line-height:1.7;
+">
+This was the primary focus area detected across your tracked sessions.
+</div>
+</div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-# ── Page 5: Replay ────────────────────────────────────────────────────────────
+    with right:
+        recovery_rate = 0
 
-from ui.replay_page import render_replay_page
+        if focus_lost_count:
+            recovery_rate = round(
+                recovered_count / focus_lost_count * 100,
+                1,
+            )
 
+        recovery_color = (
+            "#34D399"
+            if recovery_rate >= 75
+            else "#FBBF24"
+            if recovery_rate >= 40
+            else "#F87171"
+        )
+
+        st.markdown(
+            f"""
+<div class="card">
+<div class="eyebrow">Recovery Story</div>
+<div style="
+font-size:38px;
+font-weight:900;
+font-family:'JetBrains Mono',monospace;
+color:{recovery_color};
+margin-bottom:8px;
+">
+{recovery_rate}%
+</div>
+<div style="
+font-size:13px;
+color:#64748B;
+line-height:1.7;
+">
+You recovered after {recovered_count} of {focus_lost_count}
+detected focus-loss sessions.
+</div>
+</div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    # ── Focus timeline summary ───────────────────────────────────────────
+    st.markdown(
+        '<div class="card"><div class="eyebrow">Focus Timeline Summary</div>',
+        unsafe_allow_html=True,
+    )
+
+    if replay_events:
+        color_map = {
+            "start": "#22D3EE",
+            "focused": "#818CF8",
+            "recovered": "#34D399",
+            "focus_lost": "#F87171",
+        }
+
+        event_blocks = ""
+
+        for event in replay_events[:120]:
+            event_type = event.get("event_type", "focused")
+            color = color_map.get(event_type, "#64748B")
+            mission = event.get("mission", "Unknown")
+            duration = event.get("duration_minutes", 0)
+
+            event_blocks += f"""
+<span
+title="{mission} · {duration} min"
+style="
+display:inline-block;
+width:14px;
+height:14px;
+border-radius:4px;
+background:{color};
+margin:3px;
+">
+</span>
+            """
+
+        st.markdown(
+            f"""
+<div style="line-height:1.2;">
+{event_blocks}
+</div>
+<div style="
+display:flex;
+gap:16px;
+flex-wrap:wrap;
+font-size:12px;
+color:#64748B;
+margin-top:16px;
+">
+<span>🚀 Start</span>
+<span>💻 Focused</span>
+<span>✅ Recovered</span>
+<span>⚠️ Focus Lost</span>
+</div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        empty("No timeline activity available.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Recommendations ──────────────────────────────────────────────────
+    st.markdown(
+        '<div class="card"><div class="eyebrow">Recommendations for Tomorrow</div>',
+        unsafe_allow_html=True,
+    )
+
+    if not recommendations:
+        recommendations = [
+            "Begin with one uninterrupted 30-minute focus block.",
+            "Avoid switching applications while working on your main mission.",
+            "Schedule distracting communication into specific time windows.",
+            "Take a deliberate short break before fatigue becomes drift.",
+        ]
+
+    for index, recommendation in enumerate(recommendations[:6], start=1):
+        st.markdown(
+            f"""
+<div style="
+display:flex;
+align-items:flex-start;
+gap:13px;
+padding:13px 0;
+border-bottom:1px solid rgba(148,163,184,.06);
+">
+<div style="
+width:26px;
+height:26px;
+border-radius:8px;
+background:rgba(34,211,238,.1);
+border:1px solid rgba(34,211,238,.16);
+display:flex;
+align-items:center;
+justify-content:center;
+color:#22D3EE;
+font-size:12px;
+font-weight:800;
+flex-shrink:0;
+">
+{index}
+</div>
+<div style="
+font-size:14px;
+color:#CBD5E1;
+line-height:1.65;
+padding-top:2px;
+">
+{recommendation}
+</div>
+</div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── End-of-day message ───────────────────────────────────────────────
+    message = (
+        "Strong day. Protect the habits that created your focused sessions."
+        if overall >= 75
+        else
+        "A mixed day. Tomorrow, reduce switching and protect one clear mission."
+        if overall >= 50
+        else
+        "Today was fragmented. Reset tomorrow with one small, uninterrupted goal."
+    )
+
+    st.markdown(
+        f"""
+<div style="
+text-align:center;
+padding:26px;
+border-radius:18px;
+border:1px solid rgba(148,163,184,.08);
+background:rgba(13,20,35,.55);
+margin-top:4px;
+">
+<div style="
+font-size:10px;
+font-weight:800;
+letter-spacing:.12em;
+text-transform:uppercase;
+color:#22D3EE;
+margin-bottom:9px;
+">
+End of Report
+</div>
+<div style="
+font-size:17px;
+font-weight:700;
+color:#E2E8F0;
+">
+{message}
+</div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+    # ── Page 5: Replay ────────────────────────────────────────────────────────────
 
 def render_replay():
     render_replay_page(api, empty)
 
-# ── Router ────────────────────────────────────────────────────────────────────
+
+# ── Application Router ────────────────────────────────────────────────────────
 
 if not st.session_state.authenticated:
     render_auth()
+
 else:
-    count = st_autorefresh(interval=30000, limit=None, key="ar")
+    st_autorefresh(
+        interval=30000,
+        limit=None,
+        key="drift_auto_refresh",
+    )
 
-    if count > 0:
-        st.session_state.last_refresh = datetime.now()
+    st.session_state.last_refresh = datetime.now()
 
-    alive = api_alive()
-    render_sidebar(alive)
+    backend_alive = api_alive()
+    render_sidebar(backend_alive)
 
     page = st.session_state.active_page
 
     if page == "Overview":
         render_overview()
+
     elif page == "Deep Dive":
         render_deep_dive()
+
     elif page == "Intelligence":
         render_intelligence()
+
     elif page == "Replay":
         render_replay()
+
     elif page == "Daily Report":
         render_daily_report()
+
+    else:
+        st.session_state.active_page = "Overview"
+        st.rerun()
