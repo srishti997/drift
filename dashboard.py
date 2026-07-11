@@ -1646,7 +1646,7 @@ detected focus-loss sessions.
             "focus_lost": "#F87171",
         }
 
-        event_blocks = ""
+        event_blocks = []
 
         for event in replay_events[:120]:
             event_type = event.get("event_type", "focused")
@@ -1654,33 +1654,20 @@ detected focus-loss sessions.
             mission = event.get("mission", "Unknown")
             duration = event.get("duration_minutes", 0)
 
-            event_blocks += f"""
-<span
-title="{mission} · {duration} min"
-style="
-display:inline-block;
-width:14px;
-height:14px;
-border-radius:4px;
-background:{color};
-margin:3px;
-">
-</span>
-            """
+            event_blocks.append(
+                f'<span title="{mission} · {duration} min" '
+                f'style="display:inline-block;width:14px;height:14px;'
+                f'border-radius:4px;background:{color};"></span>'
+            )
+
+        blocks_html = "".join(event_blocks)
 
         st.markdown(
             f"""
-<div style="line-height:1.2;">
-{event_blocks}
+<div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:4px;">
+{blocks_html}
 </div>
-<div style="
-display:flex;
-gap:16px;
-flex-wrap:wrap;
-font-size:12px;
-color:#64748B;
-margin-top:16px;
-">
+<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#64748B;margin-top:18px;">
 <span>🚀 Start</span>
 <span>💻 Focused</span>
 <span>✅ Recovered</span>
@@ -1689,6 +1676,7 @@ margin-top:16px;
             """,
             unsafe_allow_html=True,
         )
+
     else:
         empty("No timeline activity available.")
 
@@ -1748,7 +1736,8 @@ padding-top:2px;
         )
 
     st.markdown("</div>", unsafe_allow_html=True)
-
+    
+    
     # ── End-of-day message ───────────────────────────────────────────────
     message = (
         "Strong day. Protect the habits that created your focused sessions."
