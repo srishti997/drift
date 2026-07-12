@@ -1,15 +1,17 @@
-import requests
-import pandas as pd
-import streamlit as st
-import plotly.graph_objects as go
-import plotly.express as px
+import csv
 import hashlib
+import io
 import json
 import os
 from datetime import datetime
+
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import requests
+import streamlit as st
 from streamlit_autorefresh import st_autorefresh
-from ui.replay_page import render_replay_page
-import textwrap
+
 from ui.replay_page import render_replay_page
 
 API_BASE_URL = "http://127.0.0.1:8000"
@@ -137,9 +139,25 @@ div[data-testid="stExpander"] summary{color:#94A3B8!important;font-size:13px!imp
 
 # ── Session State ─────────────────────────────────────────────────────────────
 
-for k, v in [("authenticated",False),("username",""),("display_name",""),
-             ("auth_tab","login"),("active_page","Overview"),("last_refresh",None)]:
-    if k not in st.session_state: st.session_state[k] = v
+SESSION_DEFAULTS = {
+    "authenticated": False,
+    "username": "",
+    "display_name": "",
+    "auth_tab": "login",
+    "active_page": "Overview",
+    "last_refresh": None,
+
+    # Day 6 preferences
+    "auto_refresh_enabled": True,
+    "refresh_seconds": 30,
+    "deep_work_goal": 240,
+    "focus_score_goal": 80,
+    "context_switch_goal": 40,
+}
+
+for key, default_value in SESSION_DEFAULTS.items():
+    if key not in st.session_state:
+        st.session_state[key] = default_value
 
 MISSION_COLORS = {
     "Build Drift":"#22D3EE","Career Growth":"#818CF8","Skill Development":"#34D399",
@@ -151,7 +169,136 @@ def mcolor(m): return MISSION_COLORS.get(m,"#94A3B8")
 def empty(msg):
     st.markdown(f'<div style="color:#334155;padding:24px 0;text-align:center;font-size:13px;">{msg}</div>',
                 unsafe_allow_html=True)
+def build_daily_export_data():
+    report = api("/daily-report") or {}
+    score = api("/score") or {}
+    drift = api("/drift") or {}
+    deep_work = api("/deep-work") or {}
+    recovery = api("/recovery-cost") or {}
+    replay = api("/replay") or {}
 
+    events = replay.get("events", [])
+
+    focus_lost_events = sum(
+        1
+        for event in events
+        if event.get("event_type") == "focus_lost"
+    )
+
+    recovered_events = sum(
+        1
+        for event in events
+        if event.get("event_type") == "recovered"
+    )
+
+    return {
+        "generated_at": datetime.now().isoformat(),
+        "user": st.session_state.display_name,
+        "summary": report.get("executive_summary", ""),
+        "top_mission": report.get("top_mission", "Unknown"),
+        "context_switches": report.get("context_switches", 0),
+        "overall_score": score.get("overall_score", 0),
+        "grade": score.get("grade", "N/A"),
+        "focus_score": score.get("focus_score", 0),
+        "mission_score": score.get("mission_score", 0),
+        "recovery_score": score.get("recovery_score", 0),
+        "switch_score": score.get("switch_score", 0),
+        "productive_minutes": round(
+            drift.get("productive_time", 0) / 60,
+            2,
+        ),
+        "drift_index": drift.get("drift_index", 0),
+        "deep_work_minutes": deep_work.get(
+            "total_deep_work_minutes",
+            0,
+        ),
+        "deep_work_sessions": deep_work.get(
+            "count",
+            len(deep_work.get("sessions", [])),
+        ),
+        "recovery_events": recovery.get("count", 0),
+        "recovery_cost_minutes": round(
+            recovery.get(
+                "total_recovery_cost_seconds",
+                0,
+            ) / 60,
+            2,
+        ),
+        "focus_lost_events": focus_lost_events,
+        "recovered_events": recovered_events,
+        "goals": {
+            "deep_work_minutes": st.session_state.deep_work_goal,
+            "focus_score": st.session_state.focus_score_goal,
+            "maximum_context_switches": (
+                st.session_state.context_switch_goal
+            ),
+        },
+        "recommendations": report.get("recommendations", []),
+        "events": events,
+    }
+
+
+def create_json_export(data):
+    return json.dumps(
+        data,
+        indent=2,
+        ensure_ascii=False,
+    )
+
+
+def create_csv_export(data):
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(["Metric", "Value"])
+
+    excluded_fields = {
+        "events",
+        "recommendations",
+        "goals",
+    }
+
+    for key, value in data.items():
+        if key not in excluded_fields:
+            writer.writerow([key, value])
+
+    writer.writerow([])
+    writer.writerow(["Goal", "Target"])
+
+    for goal, target in data.get("goals", {}).items():
+        writer.writerow([goal, target])
+
+    writer.writerow([])
+    writer.writerow(["Recommendation"])
+
+    for recommendation in data.get("recommendations", []):
+        writer.writerow([recommendation])
+
+    writer.writerow([])
+    writer.writerow(
+        [
+            "Block",
+            "Activity",
+            "Mission",
+            "Event",
+            "Duration Minutes",
+            "Distraction",
+        ]
+    )
+
+    for event in data.get("events", []):
+        writer.writerow(
+            [
+                event.get("time", ""),
+                event.get("activity_type", ""),
+                event.get("mission", ""),
+                event.get("event_type", ""),
+                event.get("duration_minutes", 0),
+                event.get("is_distraction", False),
+            ]
+        )
+
+    return output.getvalue()
 # ── Auth Page ─────────────────────────────────────────────────────────────────
 
 def render_auth():
@@ -244,8 +391,123 @@ def render_sidebar(alive):
 
         if st.session_state.last_refresh:
             ts = st.session_state.last_refresh.strftime("%H:%M:%S")
-            st.markdown(f"<div style='font-size:10px;color:#334155;text-align:center;margin-top:4px;'>Auto-refreshes every 30s · {ts}</div>",
-                        unsafe_allow_html=True)
+
+            refresh_text = (
+                f"Auto-refreshes every "
+                f"{st.session_state.refresh_seconds}s"
+                if st.session_state.auto_refresh_enabled
+                else "Auto-refresh disabled"
+            )
+
+            st.markdown(
+                f"""
+<div style="font-size:10px;color:#334155;text-align:center;margin-top:4px;">
+{refresh_text} · {ts}
+</div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with st.expander("⚙️ Settings", expanded=False):
+            auto_refresh = st.toggle(
+                "Auto refresh",
+                value=st.session_state.auto_refresh_enabled,
+                key="settings_auto_refresh",
+            )
+
+            refresh_options = [15, 30, 60, 120]
+            current_refresh = st.session_state.refresh_seconds
+
+            if current_refresh not in refresh_options:
+                current_refresh = 30
+
+            refresh_seconds = st.selectbox(
+                "Refresh interval",
+                options=refresh_options,
+                index=refresh_options.index(current_refresh),
+                format_func=lambda value: f"{value} seconds",
+                disabled=not auto_refresh,
+                key="settings_refresh_seconds",
+            )
+
+            st.markdown("##### Personal goals")
+
+            deep_work_goal = st.number_input(
+                "Deep-work goal (minutes)",
+                min_value=15,
+                max_value=720,
+                value=int(st.session_state.deep_work_goal),
+                step=15,
+                key="settings_deep_work_goal",
+            )
+
+            focus_score_goal = st.number_input(
+                "Focus-score goal",
+                min_value=1,
+                max_value=100,
+                value=int(st.session_state.focus_score_goal),
+                step=5,
+                key="settings_focus_goal",
+            )
+
+            context_switch_goal = st.number_input(
+                "Maximum context switches",
+                min_value=1,
+                max_value=1000,
+                value=int(st.session_state.context_switch_goal),
+                step=5,
+                key="settings_switch_goal",
+            )
+
+            if st.button(
+                "Save Settings",
+                use_container_width=True,
+                key="save_dashboard_settings",
+            ):
+                st.session_state.auto_refresh_enabled = auto_refresh
+                st.session_state.refresh_seconds = refresh_seconds
+                st.session_state.deep_work_goal = deep_work_goal
+                st.session_state.focus_score_goal = focus_score_goal
+                st.session_state.context_switch_goal = (
+                    context_switch_goal
+                )
+
+                st.session_state.last_refresh = datetime.now()
+                st.success("Settings saved.")
+                st.rerun()
+
+        with st.expander("⬇ Export Report", expanded=False):
+            if st.button(
+                "Prepare report",
+                use_container_width=True,
+                key="prepare_export",
+            ):
+                st.session_state.export_data = (
+                    build_daily_export_data()
+                )
+
+            export_data = st.session_state.get("export_data")
+
+            if export_data:
+                date_value = datetime.now().strftime("%Y-%m-%d")
+
+                st.download_button(
+                    label="Download JSON",
+                    data=create_json_export(export_data),
+                    file_name=f"drift-report-{date_value}.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key="download_json_report",
+                )
+
+                st.download_button(
+                    label="Download CSV",
+                    data=create_csv_export(export_data),
+                    file_name=f"drift-report-{date_value}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="download_csv_report",
+                )
 
         st.markdown("<div style='border-top:1px solid rgba(148,163,184,.07);margin:16px 0 10px;'></div>",
                     unsafe_allow_html=True)
@@ -330,6 +592,100 @@ def render_overview():
     <div class="stat-label">{label}</div>
     <div class="stat-value">{value}</div>
     <div class="stat-sub">{sub}</div>
+</div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    st.write("")
+    deep_goal = st.session_state.deep_work_goal
+    focus_goal = st.session_state.focus_score_goal
+    switch_goal = st.session_state.context_switch_goal
+
+    deep_progress = min(
+        100,
+        round((deep_min / deep_goal) * 100)
+        if deep_goal
+        else 0,
+    )
+
+    focus_progress = min(
+        100,
+        round((focus_s / focus_goal) * 100)
+        if focus_goal
+        else 0,
+    )
+
+    switch_progress = (
+        100
+        if ctx <= switch_goal
+        else max(
+            0,
+            round((switch_goal / ctx) * 100),
+        )
+    )
+
+    st.markdown(
+        """
+<div style="margin:8px 0 12px;">
+<div class="eyebrow">Personal Goals</div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    g1, g2, g3 = st.columns(3)
+
+    goal_cards = [
+        (
+            g1,
+            "Deep Work",
+            f"{deep_min}/{deep_goal} min",
+            deep_progress,
+            "#22D3EE",
+        ),
+        (
+            g2,
+            "Focus Score",
+            f"{focus_s}/{focus_goal}",
+            focus_progress,
+            "#34D399",
+        ),
+        (
+            g3,
+            "Context Switches",
+            f"{ctx}/{switch_goal} max",
+            switch_progress,
+            "#FB923C",
+        ),
+    ]
+
+    for column, label, value, progress, color in goal_cards:
+        with column:
+            st.markdown(
+                f"""
+<div class="stat-tile">
+<div class="stat-label">{label}</div>
+<div class="stat-value" style="font-size:20px;">
+{value}
+</div>
+<div style="
+height:7px;
+background:rgba(30,41,59,.9);
+border-radius:999px;
+overflow:hidden;
+margin-top:12px;
+">
+<div style="
+height:100%;
+width:{progress}%;
+background:{color};
+border-radius:999px;
+"></div>
+</div>
+<div class="stat-sub">
+{progress}% target progress
+</div>
 </div>
                 """,
                 unsafe_allow_html=True,
@@ -457,7 +813,7 @@ def render_deep_dive():
 
     deep_minutes = dw.get("total_deep_work_minutes", 0)
     deep_sessions = dw.get("count", len(dw.get("sessions", [])))
-    deep_goal = 240
+    deep_goal = st.session_state.deep_work_goal
     deep_progress = min(100, round((deep_minutes / deep_goal) * 100))
 
     total_switches = switches.get("total_switches", 0)
@@ -1788,38 +2144,47 @@ def render_replay():
 
 # ── Application Router ────────────────────────────────────────────────────────
 
+# ── Application Router ────────────────────────────────────────────────────────
+
 if not st.session_state.authenticated:
     render_auth()
 
 else:
-    st_autorefresh(
-        interval=30000,
-        limit=None,
-        key="drift_auto_refresh",
-    )
+    if st.session_state.auto_refresh_enabled:
+        st_autorefresh(
+            interval=st.session_state.refresh_seconds * 1000,
+            limit=None,
+            key="drift_auto_refresh",
+        )
 
-    st.session_state.last_refresh = datetime.now()
+    if st.session_state.last_refresh is None:
+        st.session_state.last_refresh = datetime.now()
 
     backend_alive = api_alive()
     render_sidebar(backend_alive)
 
     page = st.session_state.active_page
 
-    if page == "Overview":
-        render_overview()
+    try:
+        if page == "Overview":
+            render_overview()
 
-    elif page == "Deep Dive":
-        render_deep_dive()
+        elif page == "Deep Dive":
+            render_deep_dive()
 
-    elif page == "Intelligence":
-        render_intelligence()
+        elif page == "Intelligence":
+            render_intelligence()
 
-    elif page == "Replay":
-        render_replay()
+        elif page == "Replay":
+            render_replay()
 
-    elif page == "Daily Report":
-        render_daily_report()
+        elif page == "Daily Report":
+            render_daily_report()
 
-    else:
-        st.session_state.active_page = "Overview"
-        st.rerun()
+        else:
+            st.session_state.active_page = "Overview"
+            st.rerun()
+
+    except Exception as error:
+        st.error("The selected page could not be rendered.")
+        st.exception(error)
