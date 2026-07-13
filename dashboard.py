@@ -13,6 +13,7 @@ import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
 from ui.replay_page import render_replay_page
+from ui.history_page import history_page
 
 API_BASE_URL = "http://127.0.0.1:8000"
 USERS_FILE = "data/users.json"
@@ -371,11 +372,14 @@ def render_sidebar(alive):
         </div>""", unsafe_allow_html=True)
 
         pages = [
+    
     ("🧠", "Overview"),
     ("🔬", "Deep Dive"),
     ("🔮", "Intelligence"),
+    ("📈", "History"),
     ("🎬", "Replay"),
     ("📋", "Daily Report"),
+
 ]
         for icon, label in pages:
             active = st.session_state.active_page == label
@@ -2142,7 +2146,6 @@ def render_replay():
     render_replay_page(api, empty)
 
 
-# ── Application Router ────────────────────────────────────────────────────────
 
 # ── Application Router ────────────────────────────────────────────────────────
 
@@ -2174,6 +2177,9 @@ else:
 
         elif page == "Intelligence":
             render_intelligence()
+
+        elif page == "History":
+            history_page()
 
         elif page == "Replay":
             render_replay()
