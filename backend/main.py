@@ -28,7 +28,9 @@ from backend.autopsy_engine import build_mission_autopsy
 from backend.recovery_engine import build_recovery_summary
 from backend.chat_engine import answer_user_question
 from backend.replay_engine import build_day_replay
+from fastapi import FastAPI, HTTPException, Query
 
+from backend.history_engine import build_history
 app = FastAPI(title="Drift API")
 
 
@@ -52,6 +54,35 @@ class ChatRequest(BaseModel):
 def root():
     return {"message": "Drift API is running"}
 
+@app.get("/history")
+def get_history(
+    days: int = Query(
+        default=30,
+        ge=1,
+        le=365,
+        description="Number of calendar days to include.",
+    )
+):
+    """
+    Return historical productivity analytics.
+
+    Examples:
+        GET /history
+        GET /history?days=7
+        GET /history?days=30
+        GET /history?days=90
+    """
+
+    try:
+        return build_history(days=days)
+
+    except Exception as error:
+        print(f"History endpoint error: {error}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to build historical analytics.",
+        ) from error
 
 @app.post("/activity")
 def create_activity(log: ActivityLog):
