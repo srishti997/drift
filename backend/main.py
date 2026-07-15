@@ -1,36 +1,37 @@
 from datetime import datetime
 from typing import List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
-from backend.storage import load_activity_logs, save_activity_logs
-
-from backend.drift_engine import calculate_drift_metrics
-from backend.session_builder import build_sessions
-from backend.intent_engine import infer_intent
-from backend.goal_engine import build_goal_summary
-from backend.context_switch_engine import analyze_context_switches
-from backend.mission_engine import build_mission_summary
-from backend.timeline_engine import build_timeline
-from backend.pattern_engine import detect_behavior_patterns
-from backend.deep_work_engine import build_deep_work_summary
-from backend.productivity_score_engine import build_productivity_score
-from backend.daily_report_engine import build_daily_report
-from backend.coach_engine import build_coach_advice
 from backend.alert_engine import analyze_for_alerts
-
-from backend.prediction_engine import predict_drift_risk
-from backend.behavior_graph_engine import build_behavior_graph
-from backend.loop_detector_engine import detect_behavior_loops, get_next_app_prediction
-from backend.recovery_cost_engine import calculate_recovery_cost
 from backend.autopsy_engine import build_mission_autopsy
-from backend.recovery_engine import build_recovery_summary
+from backend.behavior_graph_engine import build_behavior_graph
 from backend.chat_engine import answer_user_question
-from backend.replay_engine import build_day_replay
-from fastapi import FastAPI, HTTPException, Query
-
+from backend.coach_engine import build_coach_advice
+from backend.context_switch_engine import analyze_context_switches
+from backend.daily_report_engine import build_daily_report
+from backend.deep_work_engine import build_deep_work_summary
+from backend.drift_engine import calculate_drift_metrics
+from backend.goal_engine import build_goal_summary
 from backend.history_engine import build_history
+from backend.intent_engine import infer_intent
+from backend.loop_detector_engine import (
+    detect_behavior_loops,
+    get_next_app_prediction,
+)
+from backend.mission_engine import build_mission_summary
+from backend.pattern_engine import detect_behavior_patterns
+from backend.prediction_engine import predict_drift_risk
+from backend.productivity_score_engine import build_productivity_score
+from backend.recovery_cost_engine import calculate_recovery_cost
+from backend.recovery_engine import build_recovery_summary
+from backend.replay_engine import build_day_replay
+from backend.session_builder import build_sessions
+from backend.storage import load_activity_logs, save_activity_logs
+from backend.timeline_engine import build_timeline
+
+
 app = FastAPI(title="Drift API")
 
 
@@ -45,9 +46,24 @@ class ActivityLog(BaseModel):
     mouse_count: int
 
 
-activity_logs = load_activity_logs(ActivityLog)
 class ChatRequest(BaseModel):
     question: str
+
+
+def load_saved_activity_logs() -> list[ActivityLog]:
+    raw_logs = load_activity_logs()
+    valid_logs: list[ActivityLog] = []
+
+    for item in raw_logs:
+        try:
+            valid_logs.append(ActivityLog(**item))
+        except Exception as error:
+            print(f"Skipping invalid activity log: {error}")
+
+    return valid_logs
+
+
+activity_logs = load_saved_activity_logs()
 
 
 @app.get("/")
@@ -228,8 +244,20 @@ def get_autopsy():
 
 @app.post("/chat")
 def chat(request: ChatRequest):
-    return answer_user_question(request.question, activity_logs)
+    question = request.question.strip()
 
+    if not question:
+        return {
+            "answer": "Please enter a productivity question.",
+            "provider": "drift",
+            "success": False,
+            "confidence": 0.0,
+        }
+
+    return answer_user_question(
+        question,
+        activity_logs,
+    )
 @app.get("/replay")
 def get_replay():
     return build_day_replay(activity_logs)

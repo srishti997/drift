@@ -14,6 +14,7 @@ from streamlit_autorefresh import st_autorefresh
 
 from ui.replay_page import render_replay_page
 from ui.history_page import history_page
+from ui.chat_page import chat_page
 
 API_BASE_URL = "http://127.0.0.1:8000"
 USERS_FILE = "data/users.json"
@@ -372,15 +373,14 @@ def render_sidebar(alive):
         </div>""", unsafe_allow_html=True)
 
         pages = [
-    
-    ("🧠", "Overview"),
-    ("🔬", "Deep Dive"),
-    ("🔮", "Intelligence"),
-    ("📈", "History"),
-    ("🎬", "Replay"),
-    ("📋", "Daily Report"),
-
-]
+            ("🧠", "Overview"),
+            ("🔬", "Deep Dive"),
+            ("🔮", "Intelligence"),
+            ("📈", "History"),
+            ("💬", "AI Coach"),
+            ("🎬", "Replay"),
+            ("📋", "Daily Report"),
+        ]
         for icon, label in pages:
             active = st.session_state.active_page == label
             if st.button(f"{icon}  {label}", key=f"nav_{label}", use_container_width=True,
@@ -2180,6 +2180,9 @@ else:
 
         elif page == "History":
             history_page()
+
+        elif page == "AI Coach":
+            chat_page()
 
         elif page == "Replay":
             render_replay()
