@@ -14,11 +14,28 @@ print("Env exists:", ENV_FILE.exists())
 loaded = load_dotenv(dotenv_path=ENV_FILE)
 
 print("Dotenv loaded:", loaded)
-print("API KEY:", os.getenv("GEMINI_API_KEY"))
-
+print("API key loaded:", bool(os.getenv("GEMINI_API_KEY")))
+loaded = load_dotenv(dotenv_path=ENV_FILE)
+DEMO_MODE = (
+    os.getenv("DRIFT_DEMO_MODE", "false")
+    .lower()
+    == "true"
+)
 
 def generate_ai_response(prompt: str):
     api_key = os.getenv("GEMINI_API_KEY")
+
+    if DEMO_MODE:
+        return {
+            "answer": (
+            "Drift is running in Demo Mode.\n\n"
+            "The activity was analysed successfully, "
+            "but external AI generation has been disabled.\n\n"
+            "Disable DRIFT_DEMO_MODE in your .env file to use Gemini."
+        ),
+        "provider": "drift-demo",
+        "success": True,
+    }
 
     if not api_key:
         return {

@@ -261,3 +261,5 @@ def chat(request: ChatRequest):
 @app.get("/replay")
 def get_replay():
     return build_day_replay(activity_logs)
+
+failures.extend(check_secrets())

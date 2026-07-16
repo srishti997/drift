@@ -18,6 +18,10 @@ REQUIRED_FILES = [
     PROJECT_ROOT / "ui" / "history_page.py",
     PROJECT_ROOT / "requirements.txt",
     PROJECT_ROOT / ".gitignore",
+    PROJECT_ROOT / "README.md",
+    PROJECT_ROOT / ".env.example",
+    PROJECT_ROOT / "ui" / "chat_page.py",
+    PROJECT_ROOT / "backend" / "chat_engine.py",
 ]
 
 REQUIRED_PACKAGES = [
@@ -29,6 +33,45 @@ REQUIRED_PACKAGES = [
     "plotly",
 ]
 
+def check_secrets() -> list[str]:
+    failures = []
+
+    files_to_scan = [
+        PROJECT_ROOT / "backend" / "llm_client.py",
+        PROJECT_ROOT / "dashboard.py",
+        PROJECT_ROOT / "README.md",
+        PROJECT_ROOT / ".env.example",
+    ]
+
+    suspicious_terms = [
+        "API KEY:",
+        "AIza",
+        "AQ.",
+    ]
+
+    for file_path in files_to_scan:
+        if not file_path.exists():
+            continue
+
+        content = file_path.read_text(
+            encoding="utf-8",
+            errors="ignore",
+        )
+
+        for term in suspicious_terms:
+            if term in content:
+                message = (
+                    f"Possible secret found in "
+                    f"{file_path.relative_to(PROJECT_ROOT)}: "
+                    f"{term}"
+                )
+                print(f"[FAIL] {message}")
+                failures.append(message)
+
+    if not failures:
+        print("[PASS] No obvious secrets found in source files")
+
+    return failures
 
 def check_required_files() -> list[str]:
     failures = []
@@ -196,6 +239,7 @@ def main() -> None:
     failures.extend(check_packages())
     failures.extend(check_gitignore())
     failures.extend(check_json_files())
+    failures.extend(check_secrets())
 
     print()
     print("=" * 65)
@@ -211,7 +255,8 @@ def main() -> None:
     print("Validation completed successfully.")
     print("Drift is ready to run.")
     print("=" * 65)
-
+    
 
 if __name__ == "__main__":
     main()
+    
