@@ -15,6 +15,7 @@ from streamlit_autorefresh import st_autorefresh
 from ui.replay_page import render_replay_page
 from ui.history_page import history_page
 from ui.chat_page import chat_page
+from ui.goals_page import goals_page
 
 API_BASE_URL = "http://127.0.0.1:8000"
 USERS_FILE = "data/users.json"
@@ -380,6 +381,7 @@ def render_sidebar(alive):
             ("💬", "AI Coach"),
             ("🎬", "Replay"),
             ("📋", "Daily Report"),
+            ("🎯", "Goals"),
         ]
         for icon, label in pages:
             active = st.session_state.active_page == label
@@ -2189,6 +2191,9 @@ else:
 
         elif page == "Daily Report":
             render_daily_report()
+
+        elif page == "Goals":
+            goals_page()
 
         else:
             st.session_state.active_page = "Overview"

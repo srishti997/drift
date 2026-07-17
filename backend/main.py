@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 
 from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend.alert_engine import analyze_for_alerts
 from backend.autopsy_engine import build_mission_autopsy
@@ -29,10 +29,19 @@ from backend.recovery_engine import build_recovery_summary
 from backend.replay_engine import build_day_replay
 from backend.session_builder import build_sessions
 from backend.storage import load_activity_logs, save_activity_logs
+from backend.target_engine import (
+    evaluate_targets,
+    load_targets,
+    save_targets,
+)
 from backend.timeline_engine import build_timeline
 
 
-app = FastAPI(title="Drift API")
+app = FastAPI(
+    title="Drift API",
+    version="1.0.0",
+    description="Human observability and productivity analytics API.",
+)
 
 
 class ActivityLog(BaseModel):
@@ -41,13 +50,20 @@ class ActivityLog(BaseModel):
     activity_type: str
     start_time: datetime
     end_time: datetime
-    duration_seconds: int
-    key_count: int
-    mouse_count: int
+    duration_seconds: int = Field(ge=0)
+    key_count: int = Field(default=0, ge=0)
+    mouse_count: int = Field(default=0, ge=0)
 
 
 class ChatRequest(BaseModel):
     question: str
+
+
+class TargetRequest(BaseModel):
+    deep_work_minutes: int = Field(ge=0, le=1440)
+    max_context_switches: int = Field(ge=0)
+    max_idle_minutes: int = Field(ge=0, le=1440)
+    max_youtube_minutes: int = Field(ge=0, le=1440)
 
 
 def load_saved_activity_logs() -> list[ActivityLog]:
@@ -68,7 +84,11 @@ activity_logs = load_saved_activity_logs()
 
 @app.get("/")
 def root():
-    return {"message": "Drift API is running"}
+    return {
+        "message": "Drift API is running",
+        "version": "1.0.0",
+    }
+
 
 @app.get("/history")
 def get_history(
@@ -77,18 +97,8 @@ def get_history(
         ge=1,
         le=365,
         description="Number of calendar days to include.",
-    )
+    ),
 ):
-    """
-    Return historical productivity analytics.
-
-    Examples:
-        GET /history
-        GET /history?days=7
-        GET /history?days=30
-        GET /history?days=90
-    """
-
     try:
         return build_history(days=days)
 
@@ -100,15 +110,25 @@ def get_history(
             detail="Unable to build historical analytics.",
         ) from error
 
+
 @app.post("/activity")
 def create_activity(log: ActivityLog):
     activity_logs.append(log)
-    save_activity_logs(activity_logs)
-    analyze_for_alerts(activity_logs)
+
+    try:
+        save_activity_logs(activity_logs)
+        analyze_for_alerts(activity_logs)
+    except Exception as error:
+        activity_logs.pop()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to save activity.",
+        ) from error
 
     return {
-        "message": "activity saved",
-        "total_logs": len(activity_logs)
+        "message": "Activity saved.",
+        "total_logs": len(activity_logs),
     }
 
 
@@ -119,13 +139,37 @@ def get_activity():
 
 @app.get("/summary")
 def get_summary():
-    total_time = sum(log.duration_seconds for log in activity_logs)
+    total_time = sum(
+        log.duration_seconds
+        for log in activity_logs
+    )
+
+    context_switches = 0
+    previous_app = None
+
+    for log in activity_logs:
+        current_app = log.app_name.strip().lower()
+
+        if (
+            previous_app is not None
+            and current_app != previous_app
+        ):
+            context_switches += 1
+
+        previous_app = current_app
 
     return {
         "total_tracked_seconds": total_time,
-        "context_switches": len(activity_logs),
-        "total_keyboard_events": sum(log.key_count for log in activity_logs),
-        "total_mouse_events": sum(log.mouse_count for log in activity_logs),
+        "context_switches": context_switches,
+        "total_keyboard_events": sum(
+            log.key_count
+            for log in activity_logs
+        ),
+        "total_mouse_events": sum(
+            log.mouse_count
+            for log in activity_logs
+        ),
+        "total_logs": len(activity_logs),
     }
 
 
@@ -147,25 +191,67 @@ def get_intents():
         intent_data = infer_intent(
             log.app_name,
             log.window_title,
-            log.activity_type
+            log.activity_type,
         )
 
-        results.append({
-            "app_name": log.app_name,
-            "window_title": log.window_title,
-            "activity_type": log.activity_type,
-            "duration_seconds": log.duration_seconds,
-            "intent": intent_data["intent"],
-            "goal": intent_data["goal"],
-            "confidence": intent_data["confidence"]
-        })
+        results.append(
+            {
+                "app_name": log.app_name,
+                "window_title": log.window_title,
+                "activity_type": log.activity_type,
+                "duration_seconds": log.duration_seconds,
+                "intent": intent_data["intent"],
+                "goal": intent_data["goal"],
+                "confidence": intent_data["confidence"],
+            }
+        )
 
     return results
 
 
 @app.get("/goals")
 def get_goals():
+    """
+    Return goals inferred automatically from activity.
+
+    This is different from /user-goals, which contains
+    productivity targets configured by the user.
+    """
     return build_goal_summary(activity_logs)
+
+
+@app.get("/user-goals")
+def get_user_goals():
+    return load_targets()
+
+
+@app.post("/user-goals")
+def update_user_goals(request: TargetRequest):
+    try:
+        targets = save_targets(request.model_dump())
+
+        return {
+            "message": "Targets updated successfully.",
+            "targets": targets,
+        }
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to save productivity targets.",
+        ) from error
+
+
+@app.get("/goal-progress")
+def get_goal_progress():
+    try:
+        return evaluate_targets(activity_logs)
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to evaluate productivity targets.",
+        ) from error
 
 
 @app.get("/context-switches")
@@ -242,24 +328,30 @@ def get_recovery():
 def get_autopsy():
     return build_mission_autopsy(activity_logs)
 
+
 @app.post("/chat")
 def chat(request: ChatRequest):
     question = request.question.strip()
 
     if not question:
-        return {
-            "answer": "Please enter a productivity question.",
-            "provider": "drift",
-            "success": False,
-            "confidence": 0.0,
-        }
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter a productivity question.",
+        )
 
-    return answer_user_question(
-        question,
-        activity_logs,
-    )
+    try:
+        return answer_user_question(
+            question,
+            activity_logs,
+        )
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to generate a coaching response.",
+        ) from error
+
+
 @app.get("/replay")
 def get_replay():
     return build_day_replay(activity_logs)
-
-failures.extend(check_secrets())

@@ -1,0 +1,6 @@
+{
+  "deep_work_minutes": 180,
+  "max_context_switches": 20,
+  "max_idle_minutes": 30,
+  "max_youtube_minutes": 45
+}
