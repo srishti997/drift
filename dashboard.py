@@ -526,275 +526,742 @@ def render_sidebar(alive):
             st.rerun()
 
 # ── Page 1: Overview ──────────────────────────────────────────────────────────
-
 def render_overview():
     score = api("/score") or {}
     missions = api("/missions") or {}
-    dw = api("/deep-work") or {}
+    deep_work = api("/deep-work") or {}
     report = api("/daily-report") or {}
     drift = api("/drift") or {}
     coach = api("/coach") or {}
 
-    overall = score.get("overall_score", 0)
+    # -----------------------------
+    # Helpers
+    # -----------------------------
+    def safe_int(value, default=0):
+        try:
+            return int(float(value or default))
+        except (TypeError, ValueError):
+            return default
+
+    def format_time(minutes):
+        minutes = max(0, safe_int(minutes))
+
+        if minutes < 60:
+            return f"{minutes} min"
+
+        hours = minutes // 60
+        remaining = minutes % 60
+
+        if remaining == 0:
+            return f"{hours} hr"
+
+        return f"{hours} hr {remaining} min"
+
+    # -----------------------------
+    # Read API data
+    # -----------------------------
+    overall = safe_int(score.get("overall_score"))
+    overall = max(0, min(100, overall))
+
     grade = score.get("grade", "N/A")
-    focus_s = score.get("focus_score", 0)
-    mission_s = score.get("mission_score", 0)
-    recovery_s = score.get("recovery_score", 0)
-    switch_s = score.get("switch_score", 0)
+    focus_score = safe_int(score.get("focus_score"))
+    recovery_score = safe_int(score.get("recovery_score"))
+    mission_score = safe_int(score.get("mission_score"))
+    switch_score = safe_int(score.get("switch_score"))
 
-    deep_min = dw.get("total_deep_work_minutes", 0)
-    deep_sess = dw.get("count", 0)
+    deep_minutes = safe_int(
+        deep_work.get("total_deep_work_minutes")
+    )
+    deep_sessions = safe_int(deep_work.get("count"))
 
-    ctx = report.get("context_switches", 0)
-    top_m = report.get("top_mission", "—")
-
-    drift_idx = drift.get("drift_index", 0)
-    prod_min = drift.get("productive_time", 0) // 60 if drift else 0
-    focus_ratio = drift.get("focus_score", 0)
-
-    fname = st.session_state.display_name.split()[0] if st.session_state.display_name else "there"
-    hour = datetime.now().hour
-    greeting = "Good morning" if hour < 12 else ("Good afternoon" if hour < 17 else "Good evening")
-
-    st.markdown(
-        f"""
-<div style="background:linear-gradient(135deg,rgba(34,211,238,.12),rgba(129,140,248,.08));border:1px solid rgba(34,211,238,.22);border-radius:26px;padding:34px;margin-bottom:24px;box-shadow:0 0 60px rgba(34,211,238,.06);">
-    <div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#22D3EE;margin-bottom:10px;">Overview</div>
-    <div style="display:flex;justify-content:space-between;gap:28px;align-items:center;">
-        <div>
-            <div style="font-size:36px;font-weight:900;color:#F8FAFC;margin-bottom:8px;">{greeting}, {fname} 👋</div>
-            <div style="font-size:15px;color:#94A3B8;line-height:1.7;max-width:650px;">
-                Your focus held for <b style="color:#22D3EE;">{prod_min} minutes</b> today.
-                Main mission: <b style="color:#F8FAFC;">{top_m}</b>.
-                You recorded <b style="color:#F8FAFC;">{ctx}</b> context switches.
-            </div>
-        </div>
-        <div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(#22D3EE {overall * 3.6}deg, rgba(30,41,59,.9) 0deg);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 40px rgba(34,211,238,.14);">
-            <div style="width:118px;height:118px;border-radius:50%;background:#0B1120;display:flex;align-items:center;justify-content:center;flex-direction:column;">
-                <div style="font-size:42px;font-weight:900;font-family:'JetBrains Mono',monospace;color:#F8FAFC;">{overall}</div>
-                <div style="font-size:11px;color:#22D3EE;font-weight:800;letter-spacing:.1em;">Grade {grade}</div>
-            </div>
-        </div>
-    </div>
-</div>
-        """,
-        unsafe_allow_html=True,
+    context_switches = safe_int(
+        report.get("context_switches")
     )
 
-    c1, c2, c3, c4 = st.columns(4)
-
-    stats = [
-        ("Productive Time", f"{prod_min} min", f"{focus_ratio}% focus ratio"),
-        ("Deep Work", f"{deep_min} min", f"{deep_sess} sessions"),
-        ("Context Switches", str(ctx), "goal changes"),
-        ("Drift Index", str(drift_idx), "lower is better"),
-    ]
-
-    for col, (label, value, sub) in zip([c1, c2, c3, c4], stats):
-        with col:
-            st.markdown(
-                f"""
-<div class="stat-tile">
-    <div class="stat-label">{label}</div>
-    <div class="stat-value">{value}</div>
-    <div class="stat-sub">{sub}</div>
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-    st.write("")
-    deep_goal = st.session_state.deep_work_goal
-    focus_goal = st.session_state.focus_score_goal
-    switch_goal = st.session_state.context_switch_goal
-
-    deep_progress = min(
-        100,
-        round((deep_min / deep_goal) * 100)
-        if deep_goal
-        else 0,
+    top_mission = (
+        report.get("top_mission")
+        or "No main activity yet"
     )
 
-    focus_progress = min(
-        100,
-        round((focus_s / focus_goal) * 100)
-        if focus_goal
-        else 0,
+    productive_seconds = safe_int(
+        drift.get("productive_time")
     )
 
-    switch_progress = (
-        100
-        if ctx <= switch_goal
-        else max(
-            0,
-            round((switch_goal / ctx) * 100),
+    productive_minutes = productive_seconds // 60
+
+    tracked_seconds = safe_int(
+        drift.get("total_time")
+        or drift.get("tracked_time")
+        or report.get("tracked_time")
+        or report.get("total_time")
+    )
+
+    if tracked_seconds > 0:
+        productive_ratio = round(
+            (productive_seconds / tracked_seconds) * 100
         )
-    )
-
-    st.markdown(
-        """
-<div style="margin:8px 0 12px;">
-<div class="eyebrow">Personal Goals</div>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    g1, g2, g3 = st.columns(3)
-
-    goal_cards = [
-        (
-            g1,
-            "Deep Work",
-            f"{deep_min}/{deep_goal} min",
-            deep_progress,
-            "#22D3EE",
-        ),
-        (
-            g2,
-            "Focus Score",
-            f"{focus_s}/{focus_goal}",
-            focus_progress,
-            "#34D399",
-        ),
-        (
-            g3,
-            "Context Switches",
-            f"{ctx}/{switch_goal} max",
-            switch_progress,
-            "#FB923C",
-        ),
-    ]
-
-    for column, label, value, progress, color in goal_cards:
-        with column:
-            st.markdown(
-                f"""
-<div class="stat-tile">
-<div class="stat-label">{label}</div>
-<div class="stat-value" style="font-size:20px;">
-{value}
-</div>
-<div style="
-height:7px;
-background:rgba(30,41,59,.9);
-border-radius:999px;
-overflow:hidden;
-margin-top:12px;
-">
-<div style="
-height:100%;
-width:{progress}%;
-background:{color};
-border-radius:999px;
-"></div>
-</div>
-<div class="stat-sub">
-{progress}% target progress
-</div>
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-    st.write("")
-
-    left, right = st.columns([1.4, 1])
-
-    with left:
-        bars = [
-            ("Focus", focus_s, "#22D3EE"),
-            ("Mission Alignment", mission_s, "#818CF8"),
-            ("Recovery", recovery_s, "#34D399"),
-            ("Switch Control", switch_s, "#FB923C"),
-        ]
-
-        html = '<div class="card"><div class="eyebrow">Score Breakdown</div>'
-
-        for label, value, color in bars:
-            html += f"""
-<div style="margin-bottom:18px;">
-    <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:13px;color:#94A3B8;">
-        <span>{label}</span>
-        <span style="font-family:'JetBrains Mono',monospace;color:#E2E8F0;font-weight:700;">{value}%</span>
-    </div>
-    <div style="height:9px;background:rgba(30,41,59,.9);border-radius:999px;overflow:hidden;">
-        <div style="height:100%;width:{value}%;background:{color};border-radius:999px;"></div>
-    </div>
-</div>
-            """
-
-        html += "</div>"
-        st.markdown(html, unsafe_allow_html=True)
-
-    with right:
-        advice = coach.get("advice", []) if coach else []
-
-        st.markdown(
-            '<div class="card-cyan"><div class="eyebrow">AI Coach</div>',
-            unsafe_allow_html=True,
-        )
-
-        if advice:
-            item = advice[0]
-            observation = item.get("observation", "Your day has been analysed.")
-            impact = item.get("impact", "")
-            suggestion = item.get(
-                "suggestion",
-                "Keep your next session focused and avoid unnecessary context switches.",
-            )
-
-            st.markdown(
-                f"""
-<div style="font-size:16px;color:#F8FAFC;font-weight:800;margin-bottom:10px;">{observation}</div>
-<div style="font-size:14px;color:#94A3B8;line-height:1.7;margin-bottom:16px;">{impact}</div>
-<div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.18);border-radius:14px;padding:14px;color:#CBD5E1;font-size:14px;line-height:1.6;">
-    💡 {suggestion}
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
-        else:
-            empty("Start tracking to unlock AI coaching.")
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown(
-        '<div class="card"><div class="eyebrow">Mission Distribution</div>',
-        unsafe_allow_html=True,
-    )
-
-    items = missions.get("missions", []) if missions else []
-
-    if items:
-        total_time = sum(i.get("time_seconds", 0) for i in items) or 1
-
-        for item in sorted(items, key=lambda x: x.get("time_seconds", 0), reverse=True)[:6]:
-            mission = item.get("mission", "Unknown")
-            seconds = item.get("time_seconds", 0)
-            pct = round((seconds / total_time) * 100)
-            mins = round(seconds / 60, 1)
-            color = mcolor(mission)
-
-            st.markdown(
-                f"""
-<div style="margin-bottom:16px;">
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:#CBD5E1;margin-bottom:6px;">
-        <span>{mission}</span>
-        <span>{mins} min · {pct}%</span>
-    </div>
-    <div style="height:9px;background:rgba(30,41,59,.9);border-radius:999px;overflow:hidden;">
-        <div style="height:100%;width:{pct}%;background:{color};border-radius:999px;"></div>
-    </div>
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
     else:
-        empty("🚀 Start the tracker to unlock mission insights.")
+        productive_ratio = safe_int(
+            drift.get("focus_score")
+        )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    productive_ratio = max(
+        0,
+        min(100, productive_ratio),
+    )
 
+    # -----------------------------
+    # User and greeting
+    # -----------------------------
+    display_name = st.session_state.get(
+        "display_name",
+        "",
+    )
+
+    first_name = (
+        display_name.split()[0]
+        if display_name
+        else "there"
+    )
+
+    hour = datetime.now().hour
+
+    if hour < 12:
+        greeting = "Good morning"
+    elif hour < 17:
+        greeting = "Good afternoon"
+    else:
+        greeting = "Good evening"
+
+    # -----------------------------
+    # Friendly daily story
+    # -----------------------------
+    if productive_minutes == 0:
+        day_icon = "🌱"
+        day_title = "Your focus story starts here"
+        day_message = (
+            "Start the tracker and work normally. Drift will show "
+            "where your time went and what affected your concentration."
+        )
+        status = "Waiting for activity"
+
+    elif overall >= 80:
+        day_icon = "🏆"
+        day_title = "You protected your focus well today"
+        day_message = (
+            "You maintained strong attention and completed meaningful "
+            "work with relatively few interruptions."
+        )
+        status = "Excellent focus"
+
+    elif overall >= 60:
+        day_icon = "✨"
+        day_title = "You made solid progress today"
+        day_message = (
+            "You completed useful work and maintained a healthy rhythm, "
+            "with a few moments of distraction."
+        )
+        status = "Good progress"
+
+    elif overall >= 40:
+        day_icon = "🌤️"
+        day_title = "Your focus had a few interruptions"
+        day_message = (
+            "You still moved important work forward. Drift found a few "
+            "patterns that may help your next session feel smoother."
+        )
+        status = "Mixed focus"
+
+    else:
+        day_icon = "💛"
+        day_title = "Your attention was interrupted more than usual"
+        day_message = (
+            "You still completed focused work. Drift can help you reduce "
+            "friction and recover more quickly in your next session."
+        )
+        status = "Room to improve"
+
+    productive_time = format_time(
+        productive_minutes
+    )
+
+    deep_time = format_time(
+        deep_minutes
+    )
+
+    # -----------------------------
+    # Next best action
+    # -----------------------------
+    if productive_minutes == 0:
+        next_action = (
+            "Start the tracker and complete one 25-minute focus session."
+        )
+    elif context_switches > 100:
+        next_action = (
+            "Close unused tabs and keep only your main work app open "
+            "for the next 25 minutes."
+        )
+    elif deep_minutes < 30:
+        next_action = (
+            "Block one uninterrupted 30-minute focus session next."
+        )
+    elif recovery_score < 50:
+        next_action = (
+            "After your next interruption, return immediately to one "
+            "small, clearly defined task."
+        )
+    elif focus_score < 60:
+        next_action = (
+            "Mute notifications and protect your next work block."
+        )
+    else:
+        next_action = (
+            "Keep your current rhythm and protect your next focus block."
+        )
+
+    # -----------------------------
+    # AI coach data
+    # -----------------------------
+    advice = coach.get("advice", []) if coach else []
+
+    if advice:
+        coach_item = advice[0]
+
+        coach_observation = coach_item.get(
+            "observation",
+            "Your activity has been analysed.",
+        )
+
+        coach_impact = coach_item.get(
+            "impact",
+            "",
+        )
+
+        coach_suggestion = coach_item.get(
+            "suggestion",
+            next_action,
+        )
+    else:
+        coach_observation = (
+            "Drift needs a little more activity to understand your pattern."
+        )
+        coach_impact = ""
+        coach_suggestion = next_action
+
+    # -----------------------------
+    # Header
+    # -----------------------------
+    st.caption(
+        f"{greeting}, {first_name} 👋"
+    )
+
+    # -----------------------------
+    # Hero section
+    # -----------------------------
+    with st.container(border=True):
+        hero_left, hero_right = st.columns(
+            [3, 1],
+            gap="large",
+        )
+
+        with hero_left:
+            st.markdown(
+                f"## {day_icon} {day_title}"
+            )
+
+            st.write(day_message)
+
+            st.markdown(
+                f"### You completed **{productive_time}** "
+                "of focused work today."
+            )
+
+            if (
+                top_mission
+                and top_mission
+                not in {
+                    "No main activity yet",
+                    "—",
+                }
+            ):
+                st.caption(
+                    f"Most of your attention went toward "
+                    f"**{top_mission}**."
+                )
+            else:
+                st.caption(
+                    "Your main activity will appear after "
+                    "Drift records more work."
+                )
+
+        with hero_right:
+            st.metric(
+                label="Today's focus",
+                value=f"{overall}/100",
+            )
+
+            st.caption(
+                f"{status} · Grade {grade}"
+            )
+
+    st.info(
+        f"🎯 **Your next step:** {next_action}"
+    )
+
+    st.write("")
+
+    # -----------------------------
+    # Snapshot
+    # -----------------------------
+    st.subheader("Today at a glance")
+
+    st.caption(
+        "The three numbers that best explain how your day went."
+    )
+
+    snapshot_1, snapshot_2, snapshot_3 = st.columns(
+        3,
+        gap="medium",
+    )
+
+    with snapshot_1:
+        with st.container(border=True):
+            st.markdown("### 🎯 Focused work")
+
+            st.metric(
+                label="Time",
+                value=productive_time,
+            )
+
+            if tracked_seconds > 0:
+                st.caption(
+                    f"{productive_ratio}% of your tracked time "
+                    "was focused work."
+                )
+            else:
+                st.caption(
+                    "Drift will calculate your focus percentage "
+                    "after more activity is recorded."
+                )
+
+    with snapshot_2:
+        with st.container(border=True):
+            st.markdown("### 🔥 Deep focus")
+
+            st.metric(
+                label="Time",
+                value=deep_time,
+            )
+
+            session_word = (
+                "session"
+                if deep_sessions == 1
+                else "sessions"
+            )
+
+            st.caption(
+                f"{deep_sessions} uninterrupted {session_word} completed."
+            )
+
+    with snapshot_3:
+        with st.container(border=True):
+            st.markdown("### 🔄 Attention changes")
+
+            st.metric(
+                label="Detected changes",
+                value=context_switches,
+            )
+
+            if context_switches > 100:
+                st.caption(
+                    "This includes changes between apps, windows, "
+                    "or browser contexts. A very high value may indicate "
+                    "frequent title or tab changes."
+                )
+            else:
+                st.caption(
+                    "Fewer unnecessary changes usually make it easier "
+                    "to maintain concentration."
+                )
+
+    st.write("")
+
+    # -----------------------------
+    # Explanation and coach
+    # -----------------------------
+    explanation_col, coach_col = st.columns(
+        [1.1, 1],
+        gap="medium",
+    )
+
+    with explanation_col:
+        with st.container(border=True):
+            st.subheader("How your focus felt")
+
+            st.markdown(
+                f"### {day_title}"
+            )
+
+            st.write(day_message)
+
+            focus_col, recovery_col = st.columns(2)
+
+            with focus_col:
+                st.metric(
+                    label="Focus consistency",
+                    value=f"{focus_score}/100",
+                )
+
+            with recovery_col:
+                st.metric(
+                    label="Recovery ability",
+                    value=f"{recovery_score}/100",
+                )
+
+            with st.expander(
+                "How are these scores calculated?"
+            ):
+                st.write(
+                    "**Focus consistency** reflects how steadily you "
+                    "stayed on productive activities."
+                )
+
+                st.write(
+                    "**Recovery ability** reflects how effectively you "
+                    "returned to useful work after an interruption."
+                )
+
+                st.write(
+                    "**Mission alignment** reflects how much of your time "
+                    "supported your primary task."
+                )
+
+                st.write(
+                    "**Switch control** reflects how well you limited "
+                    "unnecessary changes between activities."
+                )
+
+                breakdown_1, breakdown_2 = st.columns(2)
+
+                with breakdown_1:
+                    st.metric(
+                        "Mission alignment",
+                        f"{mission_score}/100",
+                    )
+
+                with breakdown_2:
+                    st.metric(
+                        "Switch control",
+                        f"{switch_score}/100",
+                    )
+
+    with coach_col:
+        with st.container(border=True):
+            st.subheader("🤖 Drift says")
+
+            st.markdown(
+                f"### {coach_observation}"
+            )
+
+            if coach_impact:
+                st.write(coach_impact)
+
+            st.success(
+                f"💡 {coach_suggestion}"
+            )
+
+            with st.expander(
+                "Questions you can ask Drift"
+            ):
+                st.write(
+                    "• What distracted me today?"
+                )
+                st.write(
+                    "• When was I most focused?"
+                )
+                st.write(
+                    "• What should I improve tomorrow?"
+                )
+
+    st.write("")
+
+    # -----------------------------
+    # Goals
+    # -----------------------------
+    st.subheader("Your goals")
+
+    st.caption(
+        "A simple view of what is currently on track."
+    )
+
+    deep_goal = safe_int(
+        st.session_state.get(
+            "deep_work_goal",
+            180,
+        ),
+        180,
+    )
+
+    focus_goal = safe_int(
+        st.session_state.get(
+            "focus_score_goal",
+            80,
+        ),
+        80,
+    )
+
+    switch_goal = safe_int(
+        st.session_state.get(
+            "context_switch_goal",
+            20,
+        ),
+        20,
+    )
+
+    deep_progress = (
+        min(
+            100,
+            round(
+                (deep_minutes / deep_goal) * 100
+            ),
+        )
+        if deep_goal > 0
+        else 0
+    )
+
+    focus_progress = (
+        min(
+            100,
+            round(
+                (focus_score / focus_goal) * 100
+            ),
+        )
+        if focus_goal > 0
+        else 0
+    )
+
+    if context_switches == 0:
+        switch_progress = 0
+    elif context_switches <= switch_goal:
+        switch_progress = 100
+    else:
+        switch_progress = max(
+            0,
+            round(
+                (switch_goal / context_switches) * 100
+            ),
+        )
+
+    goal_1, goal_2, goal_3 = st.columns(
+        3,
+        gap="medium",
+    )
+
+    with goal_1:
+        with st.container(border=True):
+            st.markdown("### Deep focus")
+
+            st.write(
+                f"**{deep_time}** of "
+                f"**{format_time(deep_goal)}**"
+            )
+
+            st.progress(
+                deep_progress / 100
+            )
+
+            if deep_progress >= 100:
+                st.caption(
+                    "Goal completed 🎉"
+                )
+            else:
+                remaining = max(
+                    0,
+                    deep_goal - deep_minutes,
+                )
+
+                st.caption(
+                    f"{format_time(remaining)} remaining"
+                )
+
+    with goal_2:
+        with st.container(border=True):
+            st.markdown("### Focus score")
+
+            st.write(
+                f"**{focus_score}** of "
+                f"**{focus_goal}**"
+            )
+
+            st.progress(
+                focus_progress / 100
+            )
+
+            if focus_progress >= 100:
+                st.caption(
+                    "Goal completed 🎉"
+                )
+            else:
+                remaining = max(
+                    0,
+                    focus_goal - focus_score,
+                )
+
+                st.caption(
+                    f"{remaining} points remaining"
+                )
+
+    with goal_3:
+        with st.container(border=True):
+            st.markdown("### Attention changes")
+
+            st.write(
+                f"**{context_switches}** detected"
+            )
+
+            st.progress(
+                switch_progress / 100
+            )
+
+            if context_switches == 0:
+                st.caption(
+                    "No activity recorded yet"
+                )
+            elif context_switches <= switch_goal:
+                st.caption(
+                    f"Within your limit of {switch_goal}"
+                )
+            else:
+                difference = (
+                    context_switches - switch_goal
+                )
+
+                st.caption(
+                    f"{difference} above your current limit"
+                )
+
+    st.write("")
+
+    # -----------------------------
+    # Mission distribution
+    # -----------------------------
+    st.subheader("Where your time went")
+
+    st.caption(
+        "Your main activities, translated into a simple breakdown."
+    )
+
+    mission_items = (
+        missions.get("missions", [])
+        if missions
+        else []
+    )
+
+    valid_missions = [
+        item
+        for item in mission_items
+        if safe_int(
+            item.get("time_seconds")
+        ) > 0
+    ]
+
+    if valid_missions:
+        total_mission_time = sum(
+            safe_int(
+                item.get("time_seconds")
+            )
+            for item in valid_missions
+        ) or 1
+
+        sorted_missions = sorted(
+            valid_missions,
+            key=lambda item: safe_int(
+                item.get("time_seconds")
+            ),
+            reverse=True,
+        )[:5]
+
+        with st.container(border=True):
+            for index, item in enumerate(
+                sorted_missions
+            ):
+                mission = (
+                    item.get("mission")
+                    or "Other activity"
+                )
+
+                seconds = safe_int(
+                    item.get("time_seconds")
+                )
+
+                minutes = round(
+                    seconds / 60
+                )
+
+                percentage = round(
+                    (seconds / total_mission_time)
+                    * 100
+                )
+
+                label_col, value_col = st.columns(
+                    [3, 1]
+                )
+
+                with label_col:
+                    st.markdown(
+                        f"**{mission}**"
+                    )
+
+                with value_col:
+                    st.markdown(
+                        f"**{minutes} min · "
+                        f"{percentage}%**"
+                    )
+
+                st.progress(
+                    percentage / 100
+                )
+
+                if index < len(
+                    sorted_missions
+                ) - 1:
+                    st.divider()
+
+        unclassified = next(
+            (
+                item
+                for item in sorted_missions
+                if "unclassified"
+                in str(
+                    item.get("mission", "")
+                ).lower()
+            ),
+            None,
+        )
+
+        if unclassified:
+            st.warning(
+                "A large amount of time is currently unclassified. "
+                "Improving app and window classification will make "
+                "your insights more meaningful."
+            )
+
+    else:
+        with st.container(border=True):
+            st.markdown(
+                "### No activity breakdown yet"
+            )
+
+            st.write(
+                "Start the tracker and work for a few minutes. "
+                "Drift will automatically organise your activity "
+                "into meaningful categories."
+            )
+
+            st.info(
+                "Drift can identify focused work, interruptions, "
+                "idle time, and your main activity."
+            )
 # ── Page 2: Deep Dive ─────────────────────────────────────────────────────────
 
 def render_deep_dive():
