@@ -35,7 +35,11 @@ from backend.target_engine import (
     save_targets,
 )
 from backend.timeline_engine import build_timeline
-
+from backend.weekly_engine import (
+    build_weekly_habits,
+    build_weekly_summary,
+    build_weekly_trends,
+)
 
 app = FastAPI(
     title="Drift API",
@@ -110,7 +114,46 @@ def get_history(
             detail="Unable to build historical analytics.",
         ) from error
 
+@app.get("/weekly-summary")
+def get_weekly_summary():
+    try:
+        return build_weekly_summary(activity_logs)
 
+    except Exception as error:
+        print(f"Weekly summary endpoint error: {error}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to build weekly summary.",
+        ) from error
+
+
+@app.get("/weekly-trends")
+def get_weekly_trends():
+    try:
+        return build_weekly_trends(activity_logs)
+
+    except Exception as error:
+        print(f"Weekly trends endpoint error: {error}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to build weekly trends.",
+        ) from error
+
+
+@app.get("/weekly-habits")
+def get_weekly_habits():
+    try:
+        return build_weekly_habits(activity_logs)
+
+    except Exception as error:
+        print(f"Weekly habits endpoint error: {error}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to build weekly habits.",
+        ) from error
 @app.post("/activity")
 def create_activity(log: ActivityLog):
     activity_logs.append(log)
