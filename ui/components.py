@@ -28,14 +28,16 @@ def section_header(
         else ""
     )
 
+    html = (
+        '<div class="drift-section-header">'
+        f"{eyebrow_html}"
+        f'<h2 class="drift-section-title">{safe_title}</h2>'
+        f"{description_html}"
+        "</div>"
+    )
+
     st.markdown(
-        f"""
-<div class="drift-section-header">
-    {eyebrow_html}
-    <h2 class="drift-section-title">{safe_title}</h2>
-    {description_html}
-</div>
-        """,
+        html,
         unsafe_allow_html=True,
     )
 
@@ -76,30 +78,27 @@ def metric_card(
     )
 
     trend_html = (
-        f"""
-<div class="drift-metric-trend drift-trend-{trend_type}">
-    {safe_trend}
-</div>
-        """
+        f'<div class="drift-metric-trend '
+        f'drift-trend-{trend_type}">{safe_trend}</div>'
         if safe_trend
         else ""
     )
 
+    html = (
+        '<div class="drift-metric-card">'
+        '<div class="drift-metric-top">'
+        f'<div class="drift-metric-icon">{safe_icon}</div>'
+        f"{badge_html}"
+        "</div>"
+        f'<div class="drift-metric-title">{safe_title}</div>'
+        f'<div class="drift-metric-value">{safe_value}</div>'
+        f"{subtitle_html}"
+        f"{trend_html}"
+        "</div>"
+    )
+
     st.markdown(
-        f"""
-<div class="drift-metric-card">
-    <div class="drift-metric-top">
-        <div class="drift-metric-icon">{safe_icon}</div>
-        {badge_html}
-    </div>
-
-    <div class="drift-metric-title">{safe_title}</div>
-    <div class="drift-metric-value">{safe_value}</div>
-
-    {subtitle_html}
-    {trend_html}
-</div>
-        """,
+        html,
         unsafe_allow_html=True,
     )
 
@@ -113,22 +112,18 @@ def recommendation_card(
     safe_label = escape(str(label))
     safe_icon = escape(str(icon))
 
+    html = (
+        '<div class="drift-recommendation">'
+        f'<div class="drift-recommendation-icon">{safe_icon}</div>'
+        "<div>"
+        f'<div class="drift-recommendation-label">{safe_label}</div>'
+        f'<div class="drift-recommendation-text">{safe_text}</div>'
+        "</div>"
+        "</div>"
+    )
+
     st.markdown(
-        f"""
-<div class="drift-recommendation">
-    <div class="drift-recommendation-icon">{safe_icon}</div>
-
-    <div>
-        <div class="drift-recommendation-label">
-            {safe_label}
-        </div>
-
-        <div class="drift-recommendation-text">
-            {safe_text}
-        </div>
-    </div>
-</div>
-        """,
+        html,
         unsafe_allow_html=True,
     )
 
@@ -141,17 +136,25 @@ def progress_card(
     caption: str = "",
     icon: str = "🎯",
 ) -> None:
-    safe_target = max(float(target or 0), 0)
-    safe_current = max(float(current or 0), 0)
+    try:
+        safe_target = max(float(target or 0), 0)
+    except (TypeError, ValueError):
+        safe_target = 0
 
-    if safe_target > 0:
-        progress = min(safe_current / safe_target, 1.0)
-    else:
-        progress = 0.0
+    try:
+        safe_current = max(float(current or 0), 0)
+    except (TypeError, ValueError):
+        safe_current = 0
+
+    progress = (
+        min(safe_current / safe_target, 1.0)
+        if safe_target > 0
+        else 0.0
+    )
 
     with st.container(border=True):
         st.markdown(f"### {icon} {title}")
-        st.markdown(f"**{display_value}**")
+        st.markdown(f"## {display_value}")
         st.progress(progress)
 
         if caption:

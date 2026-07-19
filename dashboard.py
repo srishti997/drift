@@ -16,6 +16,11 @@ from ui.replay_page import render_replay_page
 from ui.history_page import history_page
 from ui.chat_page import chat_page
 from ui.goals_page import goals_page
+from ui.components import (
+    metric_card,
+    recommendation_card,
+    section_header,
+)
 
 API_BASE_URL = "http://127.0.0.1:8000"
 USERS_FILE = "data/users.json"
@@ -1266,270 +1271,856 @@ def render_overview():
 
 def render_deep_dive():
     timeline = api("/timeline") or {}
-    dw = api("/deep-work") or {}
+    deep_work = api("/deep-work") or {}
     switches = api("/context-switches") or {}
     patterns = api("/patterns") or {}
     recovery = api("/recovery-cost") or {}
     replay = api("/replay") or {}
     missions = api("/missions") or {}
 
-    st.markdown(
-        """
-<div style="margin-bottom:24px;">
-<div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#22D3EE;text-transform:uppercase;margin-bottom:6px;">Deep Dive</div>
-<div class="page-title">What actually happened.</div>
-<div class="page-sub">Visual breakdown of focus, context switching, recovery, and session behavior.</div>
-</div>
-        """,
-        unsafe_allow_html=True,
+    def safe_int(value, default=0):
+        try:
+            return int(float(value or default))
+        except (TypeError, ValueError):
+            return default
+
+    def safe_float(value, default=0.0):
+        try:
+            return float(value or default)
+        except (TypeError, ValueError):
+            return default
+
+    def format_time(minutes):
+        minutes = max(0, safe_int(minutes))
+
+        if minutes < 60:
+            return f"{minutes} min"
+
+        hours = minutes // 60
+        remaining = minutes % 60
+
+        if remaining == 0:
+            return f"{hours} hr"
+
+        return f"{hours} hr {remaining} min"
+
+    # ------------------------------------------------------------------
+    # Read API data
+    # ------------------------------------------------------------------
+
+    deep_minutes = safe_int(
+        deep_work.get("total_deep_work_minutes")
     )
 
-    deep_minutes = dw.get("total_deep_work_minutes", 0)
-    deep_sessions = dw.get("count", len(dw.get("sessions", [])))
-    deep_goal = st.session_state.deep_work_goal
-    deep_progress = min(100, round((deep_minutes / deep_goal) * 100))
+    deep_sessions = safe_int(
+        deep_work.get(
+            "count",
+            len(deep_work.get("sessions", [])),
+        )
+    )
 
-    total_switches = switches.get("total_switches", 0)
-    distraction_switches = switches.get("distraction_switches", 0)
-    focus_loss_minutes = round(switches.get("estimated_focus_loss_seconds", 0) / 60, 1)
+    deep_goal = safe_int(
+        st.session_state.get(
+            "deep_work_goal",
+            240,
+        ),
+        240,
+    )
 
-    left, right = st.columns(2)
+    deep_progress = (
+        min(deep_minutes / deep_goal, 1.0)
+        if deep_goal > 0
+        else 0.0
+    )
 
-    with left:
-        st.markdown(
-            f"""
-<div class="card-cyan">
-<div class="eyebrow">Today's Deep Work</div>
-<div style="font-size:44px;font-weight:900;color:#F8FAFC;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">{deep_minutes} min</div>
-<div style="font-size:13px;color:#64748B;margin-bottom:12px;">{deep_sessions} deep work session(s) · Goal: {deep_goal} min</div>
-<div class="bar-track" style="height:10px;">
-<div class="bar-fill" style="width:{deep_progress}%;background:linear-gradient(90deg,#22D3EE,#34D399);"></div>
-</div>
-<div style="font-size:12px;color:#475569;margin-top:10px;">{deep_progress}% of daily deep work target completed</div>
-</div>
-            """,
-            unsafe_allow_html=True,
+    total_switches = safe_int(
+        switches.get("total_switches")
+    )
+
+    distraction_switches = safe_int(
+        switches.get("distraction_switches")
+    )
+
+    ignored_micro_switches = safe_int(
+        switches.get("ignored_micro_switches")
+    )
+
+    focus_loss_minutes = round(
+        safe_float(
+            switches.get("estimated_focus_loss_seconds")
+        )
+        / 60,
+        1,
+    )
+
+    recovery_events = safe_int(
+        recovery.get("count")
+    )
+
+    total_recovery_cost = round(
+        safe_float(
+            recovery.get("total_recovery_cost_seconds")
+        )
+        / 60,
+        1,
+    )
+
+    average_recovery_cost = round(
+        safe_float(
+            recovery.get("average_recovery_cost_seconds")
+        )
+        / 60,
+        1,
+    )
+
+    recovery_insight = recovery.get(
+        "insight",
+        "No recovery insight is available yet.",
+    )
+
+    mission_items = missions.get(
+        "missions",
+        [],
+    )
+
+    replay_events = replay.get(
+        "events",
+        [],
+    )
+
+    timeline_items = timeline.get(
+        "timeline",
+        [],
+    )
+
+    pattern_items = patterns.get(
+        "patterns",
+        [],
+    )
+
+    switch_insight = switches.get(
+        "insight",
+        "Drift needs more activity before it can analyse your attention.",
+    )
+
+    # ------------------------------------------------------------------
+    # Page header
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="What actually happened",
+        description=(
+            "A detailed view of your focus blocks, attention changes, "
+            "recovery behaviour, and work patterns."
+        ),
+        eyebrow="Deep dive",
+    )
+
+    # ------------------------------------------------------------------
+    # Summary metrics
+    # ------------------------------------------------------------------
+
+    summary_1, summary_2, summary_3, summary_4 = st.columns(
+        4,
+        gap="medium",
+    )
+
+    with summary_1:
+        metric_card(
+            icon="🔥",
+            title="Deep work",
+            value=format_time(deep_minutes),
+            subtitle=(
+                f"{deep_sessions} uninterrupted "
+                f"{'session' if deep_sessions == 1 else 'sessions'}."
+            ),
+            badge="Today",
         )
 
-    with right:
-        st.markdown('<div class="card"><div class="eyebrow">Context Switch Timeline</div>', unsafe_allow_html=True)
-
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Total", total_switches)
-        c2.metric("Distraction", distraction_switches)
-        c3.metric("Focus Lost", f"{focus_loss_minutes} min")
-
-        switch_density = min(40, total_switches)
-        switch_timeline = "".join(["●" if i < switch_density else "─" for i in range(40)])
-
-        st.markdown(
-            f"""
-<div style="font-size:20px;letter-spacing:2px;font-family:'JetBrains Mono',monospace;color:#FB923C;word-break:break-all;margin-top:12px;">
-{switch_timeline}
-</div>
-</div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    mission_items = missions.get("missions", []) if missions else []
-    replay_events = replay.get("events", []) if replay else []
-
-    left, right = st.columns([1.1, 1])
-
-    with left:
-        st.markdown('<div class="card"><div class="eyebrow">Mission Analytics</div>', unsafe_allow_html=True)
-
-        if mission_items:
-            total_time = sum(item.get("time_seconds", 0) for item in mission_items) or 1
-
-            for item in sorted(mission_items, key=lambda x: x.get("time_seconds", 0), reverse=True)[:7]:
-                mission = item.get("mission", "Unknown")
-                seconds = item.get("time_seconds", 0)
-                pct = round((seconds / total_time) * 100)
-                mins = round(seconds / 60, 1)
-                color = mcolor(mission)
-
-                st.markdown(
-                    f"""
-<div style="margin-bottom:18px;">
-<div style="display:flex;justify-content:space-between;font-size:13px;color:#CBD5E1;margin-bottom:6px;">
-<span>{mission}</span>
-<span>{mins} min · {pct}%</span>
-</div>
-<div class="bar-track" style="height:9px;">
-<div class="bar-fill" style="width:{pct}%;background:{color};"></div>
-</div>
-</div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+    with summary_2:
+        if total_switches <= 20:
+            switch_trend = "Stable attention rhythm"
+            switch_type = "positive"
+        elif total_switches <= 40:
+            switch_trend = "Some fragmentation"
+            switch_type = "neutral"
         else:
-            empty("No mission analytics yet. Run the tracker for a few minutes.")
+            switch_trend = "Frequent context changes"
+            switch_type = "negative"
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        metric_card(
+            icon="🔄",
+            title="Attention changes",
+            value=str(total_switches),
+            subtitle=(
+                "Only sustained context changes are counted."
+            ),
+            trend=switch_trend,
+            trend_type=switch_type,
+            badge="Detected",
+        )
 
-    with right:
-        st.markdown('<div class="card-purple"><div class="eyebrow">Daily Focus Heatmap</div>', unsafe_allow_html=True)
+    with summary_3:
+        metric_card(
+            icon="⚠️",
+            title="Distraction switches",
+            value=str(distraction_switches),
+            subtitle=(
+                "Transitions from productive work into distraction or idle time."
+            ),
+            trend=(
+                "Low distraction impact"
+                if distraction_switches <= 2
+                else "Focus interruptions detected"
+            ),
+            trend_type=(
+                "positive"
+                if distraction_switches <= 2
+                else "negative"
+            ),
+            badge="Focus",
+        )
 
-        if replay_events:
-            cols = st.columns(20)
+    with summary_4:
+        metric_card(
+            icon="⏳",
+            title="Estimated focus loss",
+            value=f"{focus_loss_minutes} min",
+            subtitle=(
+                f"{ignored_micro_switches} brief changes were ignored."
+            ),
+            badge="Estimate",
+        )
 
-            color_map = {
-                "start": "#22D3EE",
-                "focused": "#818CF8",
-                "recovered": "#34D399",
-                "focus_lost": "#F87171",
-            }
+    # ------------------------------------------------------------------
+    # Deep-work progress and switch story
+    # ------------------------------------------------------------------
 
-            for i, event in enumerate(replay_events[:120]):
-                event_type = event.get("event_type", "focused")
-                color = color_map.get(event_type, "#64748B")
+    section_header(
+        title="Focus quality",
+        description=(
+            "Understand how much uninterrupted work you completed "
+            "and what broke your concentration."
+        ),
+        eyebrow="Attention analysis",
+    )
 
-                with cols[i % 20]:
-                    st.markdown(
-                        f"""
-<div style="width:14px;height:14px;border-radius:4px;background:{color};margin-bottom:8px;"></div>
-                        """,
-                        unsafe_allow_html=True,
+    focus_col, switch_col = st.columns(
+        [1, 1],
+        gap="medium",
+    )
+
+    with focus_col:
+        with st.container(border=True):
+            st.markdown("### 🔥 Today's deep work")
+
+            st.markdown(
+                f"## {format_time(deep_minutes)}"
+            )
+
+            st.caption(
+                f"Daily target: {format_time(deep_goal)}"
+            )
+
+            st.progress(deep_progress)
+
+            if deep_progress >= 1:
+                st.success(
+                    "You completed your deep-work goal 🎉"
+                )
+            elif deep_minutes == 0:
+                st.info(
+                    "No uninterrupted deep-work session has been detected yet."
+                )
+            else:
+                remaining = max(
+                    0,
+                    deep_goal - deep_minutes,
+                )
+
+                st.caption(
+                    f"{format_time(remaining)} remaining"
+                )
+
+            sessions = deep_work.get(
+                "sessions",
+                [],
+            )
+
+            if sessions:
+                with st.expander(
+                    "View deep-work sessions"
+                ):
+                    for index, session in enumerate(
+                        sessions[:10],
+                        start=1,
+                    ):
+                        duration_seconds = safe_int(
+                            session.get("duration_seconds")
+                        )
+
+                        duration_minutes = round(
+                            duration_seconds / 60,
+                            1,
+                        )
+
+                        intent = (
+                            session.get("dominant_intent")
+                            or session.get("intent")
+                            or "Focused work"
+                        )
+
+                        apps = session.get(
+                            "apps",
+                            {},
+                        )
+
+                        app_names = (
+                            ", ".join(
+                                list(apps.keys())[:3]
+                            )
+                            if isinstance(apps, dict)
+                            else ""
+                        )
+
+                        st.markdown(
+                            f"**Session {index}: {intent}**"
+                        )
+
+                        st.caption(
+                            f"{duration_minutes} min"
+                            + (
+                                f" · {app_names}"
+                                if app_names
+                                else ""
+                            )
+                        )
+
+                        if index < len(sessions[:10]):
+                            st.divider()
+
+    with switch_col:
+        with st.container(border=True):
+            st.markdown("### 🔄 Attention-change analysis")
+
+            switch_1, switch_2 = st.columns(2)
+
+            with switch_1:
+                st.metric(
+                    "Meaningful switches",
+                    total_switches,
+                )
+
+            with switch_2:
+                st.metric(
+                    "Distractions",
+                    distraction_switches,
+                )
+
+            st.write(switch_insight)
+
+            if ignored_micro_switches > 0:
+                st.caption(
+                    f"Drift ignored {ignored_micro_switches} "
+                    "brief tab or application changes."
+                )
+
+            switch_list = switches.get(
+                "switches",
+                [],
+            )
+
+            if switch_list:
+                with st.expander(
+                    "View recent attention changes"
+                ):
+                    for index, switch in enumerate(
+                        switch_list[-8:],
+                        start=1,
+                    ):
+                        from_goal = switch.get(
+                            "from_goal",
+                            "Unknown",
+                        )
+
+                        to_goal = switch.get(
+                            "to_goal",
+                            "Unknown",
+                        )
+
+                        is_distraction = switch.get(
+                            "is_distraction",
+                            False,
+                        )
+
+                        icon = (
+                            "⚠️"
+                            if is_distraction
+                            else "➡️"
+                        )
+
+                        st.markdown(
+                            f"{icon} **{from_goal} → {to_goal}**"
+                        )
+
+                        from_app = switch.get(
+                            "from_app",
+                            "",
+                        )
+
+                        to_app = switch.get(
+                            "to_app",
+                            "",
+                        )
+
+                        if from_app or to_app:
+                            st.caption(
+                                f"{from_app or 'Unknown app'} → "
+                                f"{to_app or 'Unknown app'}"
+                            )
+
+                        if index < len(switch_list[-8:]):
+                            st.divider()
+
+    # ------------------------------------------------------------------
+    # Mission distribution
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Where your effort went",
+        description=(
+            "A breakdown of the missions Drift detected throughout your day."
+        ),
+        eyebrow="Mission analytics",
+    )
+
+    mission_col, heatmap_col = st.columns(
+        [1.1, 1],
+        gap="medium",
+    )
+
+    with mission_col:
+        with st.container(border=True):
+            st.markdown("### Mission distribution")
+
+            valid_missions = [
+                item
+                for item in mission_items
+                if safe_int(
+                    item.get("time_seconds")
+                ) > 0
+            ]
+
+            if valid_missions:
+                total_mission_seconds = sum(
+                    safe_int(
+                        item.get("time_seconds")
+                    )
+                    for item in valid_missions
+                ) or 1
+
+                sorted_missions = sorted(
+                    valid_missions,
+                    key=lambda item: safe_int(
+                        item.get("time_seconds")
+                    ),
+                    reverse=True,
+                )[:7]
+
+                for index, item in enumerate(
+                    sorted_missions
+                ):
+                    mission_name = (
+                        item.get("mission")
+                        or "Other activity"
                     )
 
-            st.caption("🚀 Start · 💻 Focused · ✅ Recovered · ⚠️ Focus Lost")
-        else:
-            empty("No focus heatmap data yet.")
+                    mission_seconds = safe_int(
+                        item.get("time_seconds")
+                    )
 
-        st.markdown("</div>", unsafe_allow_html=True)
+                    mission_minutes = round(
+                        mission_seconds / 60,
+                        1,
+                    )
 
-    left, right = st.columns(2)
+                    mission_percentage = round(
+                        mission_seconds
+                        / total_mission_seconds
+                        * 100
+                    )
 
-    with left:
-        st.markdown('<div class="card"><div class="eyebrow">Behavioral Patterns</div>', unsafe_allow_html=True)
+                    label_col, value_col = st.columns(
+                        [3, 1]
+                    )
 
-        pats = patterns.get("patterns", []) if patterns else []
-        icons = {
-            "Mission Abandonment": "⚠️",
-            "Mission Recovery": "✅",
-            "App Ping-Pong": "🔁",
-            "Deep Work": "🔥",
-        }
+                    with label_col:
+                        st.markdown(
+                            f"**{mission_name}**"
+                        )
 
-        if pats:
-            for p in pats:
-                pt = p.get("type", "Pattern")
-                cnt = p.get("count", 0)
-                desc = p.get("description", "")
+                    with value_col:
+                        st.markdown(
+                            f"**{mission_minutes} min**"
+                        )
 
-                st.markdown(
-                    f"""
-<div class="pat-row">
-<div class="pat-head">
-<span>{icons.get(pt, "◆")}</span>
-<span class="pat-name">{pt}</span>
-<span class="pat-count">×{cnt}</span>
-</div>
-<div class="pat-desc">{desc}</div>
-</div>
-                    """,
-                    unsafe_allow_html=True,
+                    st.progress(
+                        mission_percentage / 100
+                    )
+
+                    st.caption(
+                        f"{mission_percentage}% of classified activity"
+                    )
+
+                    if index < len(
+                        sorted_missions
+                    ) - 1:
+                        st.divider()
+
+            else:
+                st.info(
+                    "No mission analytics are available yet."
                 )
 
-            if patterns.get("insight"):
-                st.markdown(
-                    f"<div style='font-size:12px;color:#475569;margin-top:12px;'>{patterns['insight']}</div>",
-                    unsafe_allow_html=True,
+    with heatmap_col:
+        with st.container(border=True):
+            st.markdown("### Daily focus map")
+
+            if replay_events:
+                legend = {
+                    "start": ("🚀", "Started"),
+                    "focused": ("💻", "Focused"),
+                    "recovered": ("✅", "Recovered"),
+                    "focus_lost": ("⚠️", "Focus lost"),
+                }
+
+                displayed_events = replay_events[:40]
+
+                for index, event in enumerate(
+                    displayed_events,
+                    start=1,
+                ):
+                    event_type = event.get(
+                        "event_type",
+                        "focused",
+                    )
+
+                    icon, label = legend.get(
+                        event_type,
+                        ("•", "Activity"),
+                    )
+
+                    mission = event.get(
+                        "mission",
+                        "Unknown",
+                    )
+
+                    duration = event.get(
+                        "duration_minutes",
+                        0,
+                    )
+
+                    time_value = event.get(
+                        "time",
+                        "",
+                    )
+
+                    st.markdown(
+                        f"{icon} **{label} · {mission}**"
+                    )
+
+                    details = []
+
+                    if time_value:
+                        details.append(str(time_value))
+
+                    if duration:
+                        details.append(
+                            f"{duration} min"
+                        )
+
+                    if details:
+                        st.caption(
+                            " · ".join(details)
+                        )
+
+                    if index < len(displayed_events):
+                        st.divider()
+
+                if len(replay_events) > 40:
+                    st.caption(
+                        f"Showing the first 40 of "
+                        f"{len(replay_events)} events."
+                    )
+
+            else:
+                st.info(
+                    "No focus timeline data is available yet."
                 )
-        else:
-            empty("No behavioral patterns detected yet.")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+    # ------------------------------------------------------------------
+    # Behaviour and recovery
+    # ------------------------------------------------------------------
 
-    with right:
-        count = recovery.get("count", 0)
-        total_cost = round(recovery.get("total_recovery_cost_seconds", 0) / 60, 1)
-        avg_cost = round(recovery.get("average_recovery_cost_seconds", 0) / 60, 1)
-        insight = recovery.get("insight", "No recovery insight yet.")
+    section_header(
+        title="Behaviour and recovery",
+        description=(
+            "See repeated patterns and understand the cost of returning "
+            "to focused work after an interruption."
+        ),
+        eyebrow="Behaviour intelligence",
+    )
 
-        st.markdown('<div class="card-red"><div class="eyebrow">Recovery Cost Analysis</div>', unsafe_allow_html=True)
+    behaviour_col, recovery_col = st.columns(
+        2,
+        gap="medium",
+    )
 
-        r1, r2, r3 = st.columns(3)
-        r1.metric("Events", count)
-        r2.metric("Total Cost", f"{total_cost} min")
-        r3.metric("Avg Cost", f"{avg_cost} min")
+    with behaviour_col:
+        with st.container(border=True):
+            st.markdown("### 🧠 Behavioural patterns")
 
-        st.markdown(
-            f"""
-<div style="font-size:13px;color:#94A3B8;line-height:1.6;margin-top:16px;">
-{insight}
-</div>
-</div>
-            """,
-            unsafe_allow_html=True,
-        )
+            icons = {
+                "Mission Abandonment": "⚠️",
+                "Mission Recovery": "✅",
+                "App Ping-Pong": "🔁",
+                "Deep Work": "🔥",
+            }
 
-    st.markdown('<div class="card"><div class="eyebrow">Cognitive Timeline — Click to Expand</div>', unsafe_allow_html=True)
+            if pattern_items:
+                for index, pattern in enumerate(
+                    pattern_items
+                ):
+                    pattern_type = pattern.get(
+                        "type",
+                        "Pattern",
+                    )
 
-    tl_items = timeline.get("timeline", []) if timeline else []
+                    pattern_count = safe_int(
+                        pattern.get("count")
+                    )
 
-    if tl_items:
-        for block in tl_items:
-            mission = block.get("mission", "Unknown")
-            dur_s = block.get("duration_seconds", 0)
-            dur_m = round(dur_s / 60, 1)
-            goals = block.get("goals", {})
-            apps = block.get("apps", {})
-            color = mcolor(mission)
-            top_goal = max(goals, key=goals.get) if goals else "—"
+                    description = pattern.get(
+                        "description",
+                        "",
+                    )
 
-            with st.expander(f"{mission} · {dur_m}m · {top_goal}", expanded=False):
-                g1, g2 = st.columns(2)
+                    icon = icons.get(
+                        pattern_type,
+                        "◆",
+                    )
 
-                with g1:
-                    st.markdown("**Goals**")
+                    st.markdown(
+                        f"#### {icon} {pattern_type}"
+                    )
+
+                    st.caption(
+                        f"Detected {pattern_count} "
+                        f"{'time' if pattern_count == 1 else 'times'}"
+                    )
+
+                    if description:
+                        st.write(description)
+
+                    if index < len(pattern_items) - 1:
+                        st.divider()
+
+                pattern_insight = patterns.get(
+                    "insight"
+                )
+
+                if pattern_insight:
+                    st.info(pattern_insight)
+
+            else:
+                st.info(
+                    "No repeated behavioural patterns have been detected yet."
+                )
+
+    with recovery_col:
+        with st.container(border=True):
+            st.markdown("### ♻️ Recovery cost")
+
+            recovery_1, recovery_2, recovery_3 = st.columns(
+                3
+            )
+
+            with recovery_1:
+                st.metric(
+                    "Events",
+                    recovery_events,
+                )
+
+            with recovery_2:
+                st.metric(
+                    "Total cost",
+                    f"{total_recovery_cost} min",
+                )
+
+            with recovery_3:
+                st.metric(
+                    "Average",
+                    f"{average_recovery_cost} min",
+                )
+
+            st.write(recovery_insight)
+
+            if recovery_events == 0:
+                st.info(
+                    "No recovery events have been detected yet."
+                )
+            elif average_recovery_cost <= 2:
+                st.success(
+                    "You usually return to focused work quickly."
+                )
+            elif average_recovery_cost <= 5:
+                st.warning(
+                    "Your recovery time is moderate. Clear next actions "
+                    "may help you return faster."
+                )
+            else:
+                st.error(
+                    "Interruptions are creating a noticeable recovery cost."
+                )
+
+    # ------------------------------------------------------------------
+    # Cognitive timeline
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Cognitive timeline",
+        description=(
+            "Expand each block to see the goals and applications "
+            "that shaped that period."
+        ),
+        eyebrow="Session history",
+    )
+
+    if timeline_items:
+        for block in timeline_items:
+            mission = (
+                block.get("mission")
+                or "Unknown mission"
+            )
+
+            duration_seconds = safe_int(
+                block.get("duration_seconds")
+            )
+
+            duration_minutes = round(
+                duration_seconds / 60,
+                1,
+            )
+
+            goals = block.get(
+                "goals",
+                {},
+            )
+
+            apps = block.get(
+                "apps",
+                {},
+            )
+
+            top_goal = (
+                max(
+                    goals,
+                    key=goals.get,
+                )
+                if goals
+                else "No dominant goal"
+            )
+
+            with st.expander(
+                f"{mission} · {duration_minutes} min · {top_goal}",
+                expanded=False,
+            ):
+                goal_col, app_col = st.columns(
+                    2,
+                    gap="large",
+                )
+
+                with goal_col:
+                    st.markdown("#### Goals")
+
                     if goals:
-                        for g, secs in sorted(goals.items(), key=lambda x: -x[1]):
-                            pct = round(secs / dur_s * 100) if dur_s else 0
+                        sorted_goals = sorted(
+                            goals.items(),
+                            key=lambda item: -item[1],
+                        )
+
+                        for goal, seconds in sorted_goals:
+                            percentage = (
+                                seconds / duration_seconds
+                                if duration_seconds
+                                else 0
+                            )
+
                             st.markdown(
-                                f"""
-<div style="margin-bottom:8px;">
-<div style="display:flex;justify-content:space-between;font-size:12px;color:#94A3B8;margin-bottom:3px;">
-<span>{g}</span>
-<span>{round(secs / 60, 1)}m</span>
-</div>
-<div style="background:rgba(30,41,59,.8);border-radius:100px;height:5px;">
-<div style="width:{pct}%;height:100%;background:{color};border-radius:100px;"></div>
-</div>
-</div>
-                                """,
-                                unsafe_allow_html=True,
+                                f"**{goal}**"
+                            )
+
+                            st.caption(
+                                f"{round(seconds / 60, 1)} min"
+                            )
+
+                            st.progress(
+                                min(
+                                    percentage,
+                                    1.0,
+                                )
                             )
                     else:
-                        st.caption("No goal breakdown.")
+                        st.caption(
+                            "No goal breakdown is available."
+                        )
 
-                with g2:
-                    st.markdown("**Apps**")
+                with app_col:
+                    st.markdown("#### Applications")
+
                     if apps:
-                        for app, secs in sorted(apps.items(), key=lambda x: -x[1])[:5]:
-                            pct = round(secs / dur_s * 100) if dur_s else 0
+                        sorted_apps = sorted(
+                            apps.items(),
+                            key=lambda item: -item[1],
+                        )[:7]
+
+                        for app_name, seconds in sorted_apps:
+                            percentage = (
+                                seconds / duration_seconds
+                                if duration_seconds
+                                else 0
+                            )
+
                             st.markdown(
-                                f"""
-<div style="margin-bottom:8px;">
-<div style="display:flex;justify-content:space-between;font-size:12px;color:#94A3B8;margin-bottom:3px;">
-<span>{app}</span>
-<span>{round(secs / 60, 1)}m</span>
-</div>
-<div style="background:rgba(30,41,59,.8);border-radius:100px;height:5px;">
-<div style="width:{pct}%;height:100%;background:{color};border-radius:100px;"></div>
-</div>
-</div>
-                                """,
-                                unsafe_allow_html=True,
+                                f"**{app_name}**"
+                            )
+
+                            st.caption(
+                                f"{round(seconds / 60, 1)} min"
+                            )
+
+                            st.progress(
+                                min(
+                                    percentage,
+                                    1.0,
+                                )
                             )
                     else:
-                        st.caption("No app breakdown.")
-    else:
-        empty("No cognitive timeline data yet.")
+                        st.caption(
+                            "No application breakdown is available."
+                        )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        with st.container(border=True):
+            st.markdown(
+                "### 🌱 No cognitive timeline yet"
+            )
+
+            st.write(
+                "Run the tracker for a little longer. Drift will organise "
+                "your activity into larger work blocks and show the goals "
+                "and applications involved."
+            )
 
 # ── Page 3: Intelligence ──────────────────────────────────────────────────────
 
