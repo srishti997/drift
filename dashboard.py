@@ -2123,7 +2123,6 @@ def render_deep_dive():
             )
 
 # ── Page 3: Intelligence ──────────────────────────────────────────────────────
-
 def render_intelligence():
     predict = api("/predict") or {}
     loops = api("/loops") or {}
@@ -2132,255 +2131,373 @@ def render_intelligence():
     coach = api("/coach") or {}
     score = api("/score") or {}
     drift = api("/drift") or {}
-    missions = api("/missions") or {}
     patterns = api("/patterns") or {}
     report = api("/daily-report") or {}
     deep_work = api("/deep-work") or {}
 
-    overall_score = score.get("overall_score", 0)
-    grade = score.get("grade", "N/A")
-    focus_score = score.get("focus_score", 0)
-    mission_score = score.get("mission_score", 0)
-    recovery_score = score.get("recovery_score", 0)
-    switch_score = score.get("switch_score", 0)
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
 
-    productive_seconds = drift.get("productive_time", 0)
-    productive_minutes = round(productive_seconds / 60, 1)
+    def safe_int(value, default=0):
+        try:
+            return int(float(value or default))
+        except (TypeError, ValueError):
+            return default
 
-    drift_index = drift.get("drift_index", 0)
-    top_mission = report.get("top_mission", "Unknown")
-    deep_minutes = deep_work.get("total_deep_work_minutes", 0)
-    deep_sessions = deep_work.get("count", len(deep_work.get("sessions", [])))
+    def safe_float(value, default=0.0):
+        try:
+            return float(value or default)
+        except (TypeError, ValueError):
+            return default
 
-    context_switches = report.get("context_switches", 0)
+    def percentage(value):
+        number = safe_float(value)
 
-    st.markdown(
-        """
-<div style="margin-bottom:24px;">
-<div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#22D3EE;text-transform:uppercase;margin-bottom:6px;">Intelligence</div>
-<div class="page-title">Your productivity DNA.</div>
-<div class="page-sub">Predictions, behavior signals, and AI coaching based on how you worked today.</div>
-</div>
-        """,
-        unsafe_allow_html=True,
+        # Support APIs returning either 0.72 or 72.
+        if 0 <= number <= 1:
+            number *= 100
+
+        return max(0, min(100, round(number)))
+
+    def format_minutes(minutes):
+        minutes = max(0, round(safe_float(minutes)))
+
+        if minutes < 60:
+            return f"{minutes} min"
+
+        hours = minutes // 60
+        remaining = minutes % 60
+
+        if remaining == 0:
+            return f"{hours} hr"
+
+        return f"{hours} hr {remaining} min"
+
+    # ------------------------------------------------------------------
+    # Main values
+    # ------------------------------------------------------------------
+
+    overall_score = round(
+        safe_float(score.get("overall_score")),
+        1,
     )
 
-    # ── Executive summary ────────────────────────────────────────────────
-    executive_summary = report.get(
-        "executive_summary",
-        (
-            f"You recorded {productive_minutes} productive minutes today. "
-            f"Your dominant mission was {top_mission}. "
-            f"Your productivity score is {overall_score}/100 with grade {grade}."
+    focus_score = percentage(
+        score.get("focus_score")
+    )
+
+    recovery_score = percentage(
+        score.get("recovery_score")
+    )
+
+    mission_score = percentage(
+        score.get("mission_score")
+    )
+
+    switch_score = percentage(
+        score.get("switch_score")
+    )
+
+    grade = str(
+        score.get("grade", "N/A")
+    )
+
+    drift_index = round(
+        safe_float(drift.get("drift_index")),
+        1,
+    )
+
+    productive_minutes = round(
+        safe_float(drift.get("productive_time")) / 60,
+        1,
+    )
+
+    context_switches = safe_int(
+        report.get("context_switches")
+    )
+
+    top_mission = (
+        report.get("top_mission")
+        or predict.get("current_mission")
+        or "Not identified"
+    )
+
+    deep_minutes = safe_float(
+        deep_work.get("total_deep_work_minutes")
+    )
+
+    deep_sessions = safe_int(
+        deep_work.get(
+            "count",
+            len(deep_work.get("sessions", [])),
+        )
+    )
+
+    risk_level = str(
+        predict.get("risk_level", "UNKNOWN")
+    ).upper()
+
+    risk_score = round(
+        safe_float(predict.get("risk_score")),
+        1,
+    )
+
+    confidence = percentage(
+        predict.get("confidence")
+    )
+
+    success_probability = percentage(
+        predict.get("success_probability")
+    )
+
+    risk_reasons = predict.get(
+        "risk_reasons",
+        [],
+    )
+
+    # ------------------------------------------------------------------
+    # Coach recommendation
+    # ------------------------------------------------------------------
+
+    advice = coach.get("advice", [])
+
+    if isinstance(advice, list) and advice:
+        primary_advice = advice[0]
+
+        if isinstance(primary_advice, dict):
+            observation = str(
+                primary_advice.get(
+                    "observation",
+                    "Your workday has been analysed.",
+                )
+            ).strip()
+
+            impact = str(
+                primary_advice.get("impact", "")
+            ).strip()
+
+            suggestion = str(
+                primary_advice.get(
+                    "suggestion",
+                    "Protect one uninterrupted focus block next.",
+                )
+            ).strip()
+        else:
+            observation = str(primary_advice)
+            impact = ""
+            suggestion = (
+                "Protect one uninterrupted focus block next."
+            )
+    else:
+        observation = (
+            "Drift needs more activity before it can identify "
+            "a reliable working pattern."
+        )
+        impact = ""
+        suggestion = (
+            "Keep the tracker running and complete one focused "
+            "25–30 minute work block."
+        )
+
+    # ------------------------------------------------------------------
+    # Header
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Understand your work patterns",
+        description=(
+            "Predictions and behavioural signals translated into "
+            "simple, useful explanations."
         ),
+        eyebrow="Intelligence",
     )
 
-    st.markdown(
-        f"""
-<div style="background:linear-gradient(135deg,rgba(34,211,238,.12),rgba(129,140,248,.08));border:1px solid rgba(34,211,238,.22);border-radius:24px;padding:30px;margin-bottom:22px;">
-<div class="eyebrow">Today's Executive Summary</div>
-<div style="font-size:20px;color:#E2E8F0;line-height:1.7;font-weight:600;max-width:1000px;">
-{executive_summary}
-</div>
-<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;">
-<span class="grade-pill">Score {overall_score}</span>
-<span class="grade-pill">Grade {grade}</span>
-<span class="grade-pill">Drift {drift_index}</span>
-<span class="grade-pill">{productive_minutes} productive min</span>
-</div>
-</div>
-        """,
-        unsafe_allow_html=True,
+    recommendation_card(
+        text=suggestion,
+        label="Best action to take next",
+        icon="🎯",
     )
 
-    # ── AI Coach + prediction ────────────────────────────────────────────
-    left, right = st.columns([1.15, 1])
+    # ------------------------------------------------------------------
+    # Intelligence summary
+    # ------------------------------------------------------------------
 
-    with left:
-        st.markdown(
-            '<div class="card-cyan"><div class="eyebrow">AI Coach</div>',
-            unsafe_allow_html=True,
+    summary_1, summary_2, summary_3, summary_4 = st.columns(
+        4,
+        gap="medium",
+    )
+
+    with summary_1:
+        metric_card(
+            icon="🧠",
+            title="Productivity score",
+            value=f"{overall_score}/100",
+            subtitle=f"Current performance grade: {grade}.",
+            badge="Today",
         )
 
-        advice = coach.get("advice", [])
-
-        if advice:
-            primary = advice[0]
-
-            observation = primary.get(
-                "observation",
-                "Your workday has been analysed.",
-            )
-            impact = primary.get(
-                "impact",
-                "Your current pattern may be affecting sustained focus.",
-            )
-            suggestion = primary.get(
-                "suggestion",
-                "Protect one focused work block tomorrow.",
-            )
-
-            st.markdown(
-                f"""
-<div style="font-size:20px;font-weight:800;color:#F8FAFC;margin-bottom:12px;">
-🎯 Best thing you can do next
-</div>
-<div style="font-size:16px;color:#CBD5E1;line-height:1.7;margin-bottom:16px;">
-{observation}
-</div>
-<div style="font-size:14px;color:#64748B;line-height:1.7;margin-bottom:18px;">
-{impact}
-</div>
-<div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.18);border-radius:14px;padding:16px;color:#E2E8F0;font-size:14px;line-height:1.7;">
-💡 {suggestion}
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            if len(advice) > 1:
-                st.markdown(
-                    '<div style="margin-top:18px;"><div class="eyebrow">More Coaching</div>',
-                    unsafe_allow_html=True,
-                )
-
-                for item in advice[1:4]:
-                    st.markdown(
-                        f"""
-<div class="coach-card">
-<div class="coach-lbl">Observation</div>
-<div class="coach-txt">{item.get("observation", "")}</div>
-<div class="coach-lbl">Suggestion</div>
-<div class="coach-txt" style="margin-bottom:0;">{item.get("suggestion", "")}</div>
-</div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-
-                st.markdown("</div>", unsafe_allow_html=True)
-
+    with summary_2:
+        if risk_level in {"LOW"}:
+            risk_trend = "Low risk of losing focus"
+            risk_type = "positive"
+        elif risk_level in {"MEDIUM", "UNKNOWN"}:
+            risk_trend = "Some risk signals detected"
+            risk_type = "neutral"
         else:
-            empty("No coaching insight yet. Keep the tracker running.")
+            risk_trend = "Focus is currently vulnerable"
+            risk_type = "negative"
 
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with right:
-        risk_level = predict.get("risk_level", "UNKNOWN")
-        risk_score = predict.get("risk_score", 0)
-        confidence = round(predict.get("confidence", 0) * 100)
-        success_probability = round(
-            predict.get("success_probability", 0) * 100
+        metric_card(
+            icon="⚠️",
+            title="Focus risk",
+            value=f"{risk_score}",
+            subtitle=(
+                f"{confidence}% confidence · {risk_level.title()} risk."
+            ),
+            trend=risk_trend,
+            trend_type=risk_type,
+            badge="Prediction",
         )
 
-        risk_class = {
-            "LOW": "risk-low",
-            "MEDIUM": "risk-med",
-            "HIGH": "risk-high",
-            "CRITICAL": "risk-crit",
-        }.get(risk_level, "risk-med")
-
-        st.markdown(
-            f"""
-<div class="card-purple">
-<div class="eyebrow">Focus Risk Prediction</div>
-<div style="display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px;">
-<div>
-<div style="font-size:54px;font-weight:900;font-family:'JetBrains Mono',monospace;color:#818CF8;line-height:1;">
-{risk_score}
-</div>
-<div style="font-size:12px;color:#475569;margin-top:5px;">risk score</div>
-</div>
-<div style="text-align:right;">
-<span class="risk-pill {risk_class}">{risk_level}</span>
-<div style="font-size:12px;color:#64748B;margin-top:10px;">
-{confidence}% confidence
-</div>
-</div>
-</div>
-<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
-<div class="stat-tile">
-<div class="stat-label">Success Probability</div>
-<div class="stat-value" style="font-size:22px;">{success_probability}%</div>
-<div class="stat-sub">current mission</div>
-</div>
-<div class="stat-tile">
-<div class="stat-label">Current Mission</div>
-<div class="stat-value" style="font-size:16px;">{predict.get("current_mission", "—")}</div>
-<div class="stat-sub">prediction context</div>
-</div>
-</div>
-</div>
-            """,
-            unsafe_allow_html=True,
+    with summary_3:
+        metric_card(
+            icon="🎯",
+            title="Current mission",
+            value=str(top_mission),
+            subtitle=(
+                f"{success_probability}% predicted chance of success."
+            ),
+            badge="Mission",
         )
 
-        reasons = predict.get("risk_reasons", [])
+    with summary_4:
+        metric_card(
+            icon="🔥",
+            title="Deep work",
+            value=format_minutes(deep_minutes),
+            subtitle=(
+                f"{deep_sessions} uninterrupted "
+                f"{'session' if deep_sessions == 1 else 'sessions'}."
+            ),
+            badge="Focus",
+        )
 
-        if reasons:
-            st.markdown(
-                '<div class="card"><div class="eyebrow">Risk Signals</div>',
-                unsafe_allow_html=True,
-            )
+    # ------------------------------------------------------------------
+    # What Drift noticed
+    # ------------------------------------------------------------------
 
-            for reason in reasons[:5]:
-                st.markdown(
-                    f"""
-<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(148,163,184,.06);font-size:13px;color:#94A3B8;">
-<span style="color:#FBBF24;">⚠</span>
-<span>{reason}</span>
-</div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-            st.markdown("</div>", unsafe_allow_html=True)
-
-    # ── Behavior pattern cards ────────────────────────────────────────────
-    st.markdown(
-        '<div style="margin-top:6px;margin-bottom:12px;"><div class="eyebrow">Behavior Patterns</div></div>',
-        unsafe_allow_html=True,
+    section_header(
+        title="What Drift noticed",
+        description=(
+            "The most important explanation behind today's scores."
+        ),
+        eyebrow="AI interpretation",
     )
 
-    pattern_items = patterns.get("patterns", [])
-    p1, p2, p3 = st.columns(3)
+    insight_col, risk_col = st.columns(
+        [1.1, 1],
+        gap="medium",
+    )
 
-    pattern_cards = []
+    with insight_col:
+        with st.container(border=True):
+            st.markdown("### 🤖 Main observation")
 
-    if pattern_items:
-        for item in pattern_items[:3]:
-            pattern_cards.append(
-                (
-                    item.get("type", "Behavior Pattern"),
-                    item.get("count", 0),
-                    item.get("description", "Pattern detected."),
-                )
+            st.markdown(
+                f"#### {observation}"
             )
 
-    while len(pattern_cards) < 3:
-        if len(pattern_cards) == 0:
-            pattern_cards.append(
-                (
-                    "Deep Focus",
-                    deep_sessions,
-                    f"{deep_minutes} minutes of deep work today.",
+            if impact:
+                st.write(impact)
+
+            st.divider()
+
+            st.markdown("### What this means")
+
+            if overall_score >= 80:
+                st.success(
+                    "Your work pattern was focused and well controlled."
                 )
-            )
-        elif len(pattern_cards) == 1:
-            pattern_cards.append(
-                (
-                    "Context Switching",
+            elif overall_score >= 60:
+                st.info(
+                    "You made useful progress, although a few interruptions "
+                    "reduced your focus quality."
+                )
+            elif overall_score >= 40:
+                st.warning(
+                    "Your work was productive in parts, but attention "
+                    "changes made sustained focus difficult."
+                )
+            else:
+                st.error(
+                    "Your workday was fragmented. A smaller and more clearly "
+                    "defined next task may help."
+                )
+
+            detail_1, detail_2 = st.columns(2)
+
+            with detail_1:
+                st.metric(
+                    "Focused work",
+                    format_minutes(productive_minutes),
+                )
+
+            with detail_2:
+                st.metric(
+                    "Attention changes",
                     context_switches,
-                    "Total mission or application switches.",
                 )
-            )
-        else:
-            pattern_cards.append(
-                (
-                    "Recovery",
-                    recovery_score,
-                    "Your ability to return after distraction.",
+
+    with risk_col:
+        with st.container(border=True):
+            st.markdown("### 🔮 Focus-risk prediction")
+
+            risk_left, risk_right = st.columns(2)
+
+            with risk_left:
+                st.metric(
+                    "Risk score",
+                    risk_score,
                 )
+
+            with risk_right:
+                st.metric(
+                    "Success probability",
+                    f"{success_probability}%",
+                )
+
+            st.caption(
+                f"Prediction confidence: {confidence}%"
             )
+
+            if risk_reasons:
+                st.markdown("#### Why this prediction was made")
+
+                for reason in risk_reasons[:5]:
+                    st.write(f"⚠️ {reason}")
+
+            else:
+                st.info(
+                    "No specific risk signals are available yet."
+                )
+
+    # ------------------------------------------------------------------
+    # Behaviour signals
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Behaviour signals",
+        description=(
+            "Repeated patterns Drift detected while you worked."
+        ),
+        eyebrow="Pattern detection",
+    )
+
+    pattern_items = patterns.get(
+        "patterns",
+        [],
+    )
 
     icons = {
         "Mission Abandonment": "⚠️",
@@ -2388,292 +2505,438 @@ def render_intelligence():
         "App Ping-Pong": "🔁",
         "Deep Work": "🔥",
         "Deep Focus": "🔥",
-        "Context Switching": "⚡",
-        "Recovery": "✅",
+        "Context Switching": "🔄",
+        "Recovery": "♻️",
     }
 
-    for col, item in zip([p1, p2, p3], pattern_cards):
-        title, count, description = item
-
-        with col:
-            st.markdown(
-                f"""
-<div class="stat-tile" style="min-height:170px;">
-<div style="font-size:25px;margin-bottom:12px;">{icons.get(title, "◆")}</div>
-<div style="font-size:17px;font-weight:800;color:#F1F5F9;margin-bottom:8px;">
-{title}
-</div>
-<div style="font-size:28px;font-weight:900;color:#22D3EE;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">
-{count}
-</div>
-<div style="font-size:12px;color:#64748B;line-height:1.6;">
-{description}
-</div>
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-    st.write("")
-
-    # ── Predictions + next app ────────────────────────────────────────────
-    left, right = st.columns(2)
-
-    with left:
-        predicted_app = next_app.get("predicted_next_app", "Not enough data")
-        app_confidence = round(next_app.get("confidence", 0) * 100)
-        current_sequence = next_app.get("current_sequence", [])
-        sequence_text = " → ".join(current_sequence) if current_sequence else "No pattern available"
-
-        st.markdown(
-            f"""
-<div class="card">
-<div class="eyebrow">Next App Prediction</div>
-<div style="font-size:12px;color:#64748B;margin-bottom:8px;">Current sequence</div>
-<div style="font-size:13px;color:#818CF8;font-family:'JetBrains Mono',monospace;margin-bottom:18px;line-height:1.6;">
-{sequence_text}
-</div>
-<div style="font-size:12px;color:#64748B;margin-bottom:5px;">Likely next app</div>
-<div style="font-size:26px;font-weight:900;color:#22D3EE;font-family:'JetBrains Mono',monospace;">
-{predicted_app}
-</div>
-<div style="font-size:13px;color:#475569;margin-top:8px;">
-{app_confidence}% confidence
-</div>
-<div style="font-size:13px;color:#94A3B8;line-height:1.6;margin-top:16px;padding:14px;background:rgba(34,211,238,.05);border-radius:12px;">
-{next_app.get("insight", "Keep tracking to improve prediction quality.")}
-</div>
-</div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with right:
-        loop_items = loops.get("loops", [])
-        top_loop = loops.get("top_loop")
-
-        st.markdown(
-            '<div class="card"><div class="eyebrow">Behavior Loops</div>',
-            unsafe_allow_html=True,
-        )
-
-        if top_loop:
-            sequence = " → ".join(top_loop.get("sequence", []))
-            count = top_loop.get("count", 0)
-
-            st.markdown(
-                f"""
-<div style="background:rgba(129,140,248,.08);border:1px solid rgba(129,140,248,.15);border-radius:14px;padding:16px;margin-bottom:15px;">
-<div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#818CF8;margin-bottom:7px;">Strongest Loop</div>
-<div style="font-size:14px;color:#E2E8F0;font-family:'JetBrains Mono',monospace;line-height:1.6;">
-{sequence}
-</div>
-<div style="font-size:12px;color:#64748B;margin-top:6px;">
-Repeated ×{count}
-</div>
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        if loop_items:
-            for loop in loop_items[:5]:
-                sequence = " → ".join(loop.get("sequence", []))
-                count = loop.get("count", 0)
-
-                st.markdown(
-                    f"""
-<div class="loop-row">
-<div class="loop-seq">{sequence}</div>
-<div style="font-size:11px;color:#475569;margin-top:3px;">repeated ×{count}</div>
-</div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-        else:
-            empty("No repeated behavior loops detected yet.")
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # ── Productivity DNA ──────────────────────────────────────────────────
-    mission_items = missions.get("missions", [])
-    mission_times = {
-        item.get("mission", "Unknown"): item.get("time_seconds", 0)
-        for item in mission_items
-    }
-
-    max_mission_time = max(mission_times.values()) if mission_times else 1
-
-    def trait_score(*mission_names):
-        total = sum(mission_times.get(name, 0) for name in mission_names)
-        return min(5, max(0, round((total / max_mission_time) * 5)))
-
-    traits = [
-        ("Builder", trait_score("Build Drift"), "#22D3EE"),
-        (
-            "Researcher",
-            trait_score("Career Growth", "Skill Development"),
-            "#818CF8",
-        ),
-        (
-            "Communicator",
-            trait_score("Communication"),
-            "#FB923C",
-        ),
-        (
-            "Focus Recovery",
-            min(5, max(0, round(recovery_score / 20))),
-            "#34D399",
-        ),
-        (
-            "Switch Control",
-            min(5, max(0, round(switch_score / 20))),
-            "#FBBF24",
-        ),
+    fallback_patterns = [
+        {
+            "type": "Deep Focus",
+            "count": deep_sessions,
+            "description": (
+                f"{format_minutes(deep_minutes)} of uninterrupted "
+                "work was detected."
+            ),
+        },
+        {
+            "type": "Context Switching",
+            "count": context_switches,
+            "description": (
+                "Meaningful changes between work contexts."
+            ),
+        },
+        {
+            "type": "Recovery",
+            "count": recovery_score,
+            "description": (
+                "Your ability to return after an interruption."
+            ),
+        },
     ]
 
-    st.markdown(
-        '<div class="card-purple"><div class="eyebrow">Productivity DNA</div>',
-        unsafe_allow_html=True,
+    display_patterns = (
+        pattern_items[:3]
+        if pattern_items
+        else fallback_patterns
     )
 
-    for trait, rating, color in traits:
-        filled = "★" * rating
-        empty_stars = "☆" * (5 - rating)
+    pattern_columns = st.columns(
+        len(display_patterns),
+        gap="medium",
+    )
 
-        st.markdown(
-            f"""
-<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(148,163,184,.06);">
-<span style="font-size:14px;font-weight:700;color:#E2E8F0;">{trait}</span>
-<span style="font-size:20px;letter-spacing:3px;color:{color};">{filled}<span style="color:#334155;">{empty_stars}</span></span>
-</div>
-            """,
-            unsafe_allow_html=True,
+    for column, pattern in zip(
+        pattern_columns,
+        display_patterns,
+    ):
+        pattern_type = str(
+            pattern.get("type", "Pattern")
         )
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # ── Mission autopsy ──────────────────────────────────────────────────
-    if autopsy and autopsy.get("mission"):
-        success_probability = round(
-            autopsy.get("success_probability", 0) * 100
+        pattern_count = safe_int(
+            pattern.get("count")
         )
 
-        st.markdown(
-            '<div class="card-cyan"><div class="eyebrow">Mission Autopsy</div>',
-            unsafe_allow_html=True,
+        pattern_description = str(
+            pattern.get(
+                "description",
+                "Behavioural pattern detected.",
+            )
         )
 
-        left, right = st.columns([1.4, 1])
+        with column:
+            with st.container(border=True):
+                st.markdown(
+                    f"### {icons.get(pattern_type, '◆')} "
+                    f"{pattern_type}"
+                )
 
-        with left:
+                st.markdown(
+                    f"## {pattern_count}"
+                )
+
+                st.write(pattern_description)
+
+    pattern_insight = patterns.get("insight")
+
+    if pattern_insight:
+        st.info(pattern_insight)
+
+    # ------------------------------------------------------------------
+    # Next app and behaviour loops
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Habit predictions",
+        description=(
+            "See which application Drift expects next and which "
+            "behaviour loops repeat most often."
+        ),
+        eyebrow="Behaviour prediction",
+    )
+
+    next_app_col, loops_col = st.columns(
+        2,
+        gap="medium",
+    )
+
+    with next_app_col:
+        with st.container(border=True):
+            st.markdown("### 💻 Next application prediction")
+
+            predicted_app = (
+                next_app.get("predicted_next_app")
+                or "Not enough data"
+            )
+
+            app_confidence = percentage(
+                next_app.get("confidence")
+            )
+
+            current_sequence = next_app.get(
+                "current_sequence",
+                [],
+            )
+
             st.markdown(
-                f"""
-<div style="font-size:18px;font-weight:800;color:#F8FAFC;margin-bottom:10px;">
-{autopsy.get("mission", "Unknown Mission")}
-</div>
-<div style="font-size:14px;color:#94A3B8;line-height:1.7;margin-bottom:18px;">
-{autopsy.get("summary", "No summary available.")}
-</div>
-<div style="background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.15);border-radius:12px;padding:14px;margin-bottom:12px;">
-<div class="coach-lbl" style="color:#F87171;">Failure Signal</div>
-<div style="font-size:13px;color:#CBD5E1;">{autopsy.get("failure_reason", "No major failure signal.")}</div>
-</div>
-<div style="background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.15);border-radius:12px;padding:14px;">
-<div class="coach-lbl" style="color:#34D399;">Recommendation</div>
-<div style="font-size:13px;color:#CBD5E1;">{autopsy.get("recommendation", "Continue protecting focused sessions.")}</div>
-</div>
-                """,
-                unsafe_allow_html=True,
+                f"## {predicted_app}"
             )
 
-        with right:
-            probability_color = (
-                "#34D399"
-                if success_probability >= 60
-                else "#FBBF24"
-                if success_probability >= 40
-                else "#F87171"
+            st.caption(
+                f"{app_confidence}% confidence"
             )
 
-            st.markdown(
-                f"""
-<div style="text-align:center;padding:14px 0 22px;">
-<div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748B;margin-bottom:8px;">
-Success Probability
-</div>
-<div style="font-size:60px;font-weight:900;font-family:'JetBrains Mono',monospace;color:{probability_color};">
-{success_probability}%
-</div>
-</div>
-                """,
-                unsafe_allow_html=True,
+            if current_sequence:
+                st.markdown("#### Current pattern")
+                st.code(
+                    " → ".join(
+                        str(item)
+                        for item in current_sequence
+                    ),
+                    language=None,
+                )
+
+            app_insight = next_app.get("insight")
+
+            if app_insight:
+                st.info(app_insight)
+            else:
+                st.caption(
+                    "Keep tracking to improve prediction quality."
+                )
+
+    with loops_col:
+        with st.container(border=True):
+            st.markdown("### 🔁 Repeated behaviour loops")
+
+            loop_items = loops.get(
+                "loops",
+                [],
             )
 
-            autopsy_rows = [
+            top_loop = loops.get(
+                "top_loop"
+            )
+
+            if top_loop:
+                top_sequence = " → ".join(
+                    str(item)
+                    for item in top_loop.get(
+                        "sequence",
+                        [],
+                    )
+                )
+
+                top_count = safe_int(
+                    top_loop.get("count")
+                )
+
+                st.markdown("#### Strongest loop")
+                st.code(
+                    top_sequence or "Unknown sequence",
+                    language=None,
+                )
+                st.caption(
+                    f"Repeated {top_count} times"
+                )
+
+                st.divider()
+
+            if loop_items:
+                st.markdown("#### Other detected loops")
+
+                for index, loop in enumerate(
+                    loop_items[:5],
+                    start=1,
+                ):
+                    sequence = " → ".join(
+                        str(item)
+                        for item in loop.get(
+                            "sequence",
+                            [],
+                        )
+                    )
+
+                    count = safe_int(
+                        loop.get("count")
+                    )
+
+                    st.markdown(
+                        f"**{index}. {sequence or 'Unknown sequence'}**"
+                    )
+
+                    st.caption(
+                        f"Repeated {count} times"
+                    )
+
+                    if index < len(loop_items[:5]):
+                        st.divider()
+
+            elif not top_loop:
+                st.info(
+                    "No repeated behaviour loops have been detected yet."
+                )
+
+    # ------------------------------------------------------------------
+    # Score explanation
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Your focus profile",
+        description=(
+            "A simple breakdown of the abilities that shaped "
+            "your productivity score."
+        ),
+        eyebrow="Productivity profile",
+    )
+
+    profile_left, profile_right = st.columns(
+        2,
+        gap="medium",
+    )
+
+    with profile_left:
+        with st.container(border=True):
+            st.markdown("### Score breakdown")
+
+            score_items = [
                 (
-                    "Alignment",
-                    f"{autopsy.get('mission_alignment_percentage', 0)}%",
+                    "Focus consistency",
+                    focus_score,
+                    "How steadily you stayed on useful work.",
                 ),
                 (
-                    "Deep Work",
-                    f"{autopsy.get('deep_work_minutes', 0)} min",
+                    "Mission alignment",
+                    mission_score,
+                    "How much activity supported your main objective.",
                 ),
                 (
-                    "Abandonments",
-                    autopsy.get("mission_abandonments", 0),
+                    "Recovery ability",
+                    recovery_score,
+                    "How effectively you returned after interruptions.",
                 ),
                 (
-                    "Recoveries",
-                    autopsy.get("mission_recoveries", 0),
-                ),
-                (
-                    "Recovery Cost",
-                    f"{autopsy.get('estimated_recovery_cost_minutes', 0)} min",
+                    "Switch control",
+                    switch_score,
+                    "How well you limited unnecessary context changes.",
                 ),
             ]
 
-            for label, value in autopsy_rows:
-                st.markdown(
-                    f"""
-<div class="autopsy-row">
-<span>{label}</span>
-<span class="autopsy-val">{value}</span>
-</div>
-                    """,
-                    unsafe_allow_html=True,
+            for index, (
+                label,
+                value,
+                explanation,
+            ) in enumerate(score_items):
+                score_label, score_value = st.columns(
+                    [3, 1]
                 )
 
-        st.markdown("</div>", unsafe_allow_html=True)
+                with score_label:
+                    st.markdown(f"**{label}**")
 
-    # ── Quick wins ────────────────────────────────────────────────────────
-    recommendations = report.get("recommendations", [])
+                with score_value:
+                    st.markdown(f"**{value}/100**")
+
+                st.progress(
+                    value / 100
+                )
+
+                st.caption(explanation)
+
+                if index < len(score_items) - 1:
+                    st.divider()
+
+    with profile_right:
+        with st.container(border=True):
+            st.markdown("### How to read this page")
+
+            st.write(
+                "**Predictions** estimate what may happen next based "
+                "on repeated work patterns."
+            )
+
+            st.write(
+                "**Behaviour signals** describe patterns already detected "
+                "in your activity."
+            )
+
+            st.write(
+                "**Mission analysis** evaluates whether your activity "
+                "supported your dominant objective."
+            )
+
+            st.info(
+                "These insights become more reliable as Drift records "
+                "more activity across different workdays."
+            )
+
+    # ------------------------------------------------------------------
+    # Mission autopsy
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Mission autopsy",
+        description=(
+            "Understand why your main mission succeeded, stalled, "
+            "or lost momentum."
+        ),
+        eyebrow="Mission analysis",
+    )
+
+    if autopsy and autopsy.get("mission"):
+        autopsy_success = percentage(
+            autopsy.get("success_probability")
+        )
+
+        autopsy_mission = (
+            autopsy.get("mission")
+            or "Unknown mission"
+        )
+
+        autopsy_summary = (
+            autopsy.get("summary")
+            or "No mission summary is available."
+        )
+
+        failure_reason = (
+            autopsy.get("failure_reason")
+            or "No major failure signal was detected."
+        )
+
+        autopsy_recommendation = (
+            autopsy.get("recommendation")
+            or "Continue protecting focused work sessions."
+        )
+
+        with st.container(border=True):
+            autopsy_left, autopsy_right = st.columns(
+                [1.5, 1],
+                gap="large",
+            )
+
+            with autopsy_left:
+                st.markdown(
+                    f"### 🎯 {autopsy_mission}"
+                )
+
+                st.write(autopsy_summary)
+
+                st.warning(
+                    f"**Main risk:** {failure_reason}"
+                )
+
+                st.success(
+                    f"**Recommendation:** {autopsy_recommendation}"
+                )
+
+            with autopsy_right:
+                st.metric(
+                    "Success probability",
+                    f"{autopsy_success}%",
+                )
+
+                st.metric(
+                    "Mission alignment",
+                    f"{safe_int(autopsy.get('mission_alignment_percentage'))}%",
+                )
+
+                st.metric(
+                    "Deep work",
+                    f"{safe_float(autopsy.get('deep_work_minutes')):g} min",
+                )
+
+                st.caption(
+                    f"{safe_int(autopsy.get('mission_abandonments'))} "
+                    "abandonments · "
+                    f"{safe_int(autopsy.get('mission_recoveries'))} "
+                    "recoveries"
+                )
+
+    else:
+        with st.container(border=True):
+            st.markdown("### 🌱 No mission autopsy yet")
+
+            st.write(
+                "Drift needs a clearly detected mission and more activity "
+                "before it can explain why the mission succeeded or stalled."
+            )
+
+    # ------------------------------------------------------------------
+    # Quick wins
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Quick wins for tomorrow",
+        description=(
+            "Small actions that can improve your next workday."
+        ),
+        eyebrow="Action plan",
+    )
+
+    recommendations = report.get(
+        "recommendations",
+        [],
+    )
 
     if not recommendations:
         recommendations = [
-            "Protect one uninterrupted focus block tomorrow.",
+            suggestion,
             "Reduce unnecessary application switching.",
             "Finish the current mission before starting another.",
-            "Review your highest-risk distraction period.",
+            "Protect the first 30 minutes of your next work session.",
         ]
 
-    st.markdown(
-        '<div class="card"><div class="eyebrow">Quick Wins for Tomorrow</div>',
-        unsafe_allow_html=True,
-    )
+    with st.container(border=True):
+        for index, recommendation in enumerate(
+            recommendations[:5],
+            start=1,
+        ):
+            st.markdown(
+                f"### {index}. {recommendation}"
+            )
 
-    for recommendation in recommendations[:6]:
-        st.markdown(
-            f"""
-<div class="rec-item">
-<div class="rec-arrow">✓</div>
-<div>{recommendation}</div>
-</div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("</div>", unsafe_allow_html=True)
+            if index < len(recommendations[:5]):
+                st.divider()
 # ── Page 4: Daily Report ──────────────────────────────────────────────────────
 
 def render_daily_report():
