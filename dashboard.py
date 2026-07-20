@@ -2938,531 +2938,675 @@ def render_intelligence():
             if index < len(recommendations[:5]):
                 st.divider()
 # ── Page 4: Daily Report ──────────────────────────────────────────────────────
-
 def render_daily_report():
     report = api("/daily-report") or {}
     coach = api("/coach") or {}
     score = api("/score") or {}
-    dw = api("/deep-work") or {}
+    deep_work = api("/deep-work") or {}
     drift = api("/drift") or {}
     recovery = api("/recovery-cost") or {}
     replay = api("/replay") or {}
 
+    def safe_int(value, default=0):
+        try:
+            return int(float(value or default))
+        except (TypeError, ValueError):
+            return default
+
+    def safe_float(value, default=0.0):
+        try:
+            return float(value or default)
+        except (TypeError, ValueError):
+            return default
+
+    def clamp(value, minimum=0, maximum=100):
+        return max(minimum, min(maximum, value))
+
+    def format_minutes(value):
+        minutes = max(0, round(safe_float(value)))
+
+        if minutes < 60:
+            return f"{minutes} min"
+
+        hours = minutes // 60
+        remaining = minutes % 60
+
+        if remaining == 0:
+            return f"{hours} hr"
+
+        return f"{hours} hr {remaining} min"
+
     today = datetime.now().strftime("%A, %B %d")
 
-    overall = score.get("overall_score", 0)
-    grade = score.get("grade", "N/A")
-    focus_score = score.get("focus_score", 0)
-    mission_score = score.get("mission_score", 0)
-    recovery_score = score.get("recovery_score", 0)
-    switch_score = score.get("switch_score", 0)
+    overall = round(
+        safe_float(score.get("overall_score")),
+        1,
+    )
 
-    deep_minutes = dw.get("total_deep_work_minutes", 0)
-    deep_sessions = dw.get("count", len(dw.get("sessions", [])))
+    grade = str(
+        score.get("grade", "N/A")
+    )
 
-    context_switches = report.get("context_switches", 0)
-    top_mission = report.get("top_mission", "Unknown")
-    recommendations = report.get("recommendations", [])
+    focus_score = clamp(
+        safe_int(score.get("focus_score"))
+    )
 
-    productive_seconds = drift.get("productive_time", 0)
-    productive_minutes = round(productive_seconds / 60, 1)
-    drift_index = drift.get("drift_index", 0)
+    mission_score = clamp(
+        safe_int(score.get("mission_score"))
+    )
 
-    recovery_events = recovery.get("count", 0)
-    recovery_cost = round(
-        recovery.get("total_recovery_cost_seconds", 0) / 60,
+    recovery_score = clamp(
+        safe_int(score.get("recovery_score"))
+    )
+
+    switch_score = clamp(
+        safe_int(score.get("switch_score"))
+    )
+
+    deep_minutes = safe_float(
+        deep_work.get("total_deep_work_minutes")
+    )
+
+    deep_sessions = safe_int(
+        deep_work.get(
+            "count",
+            len(deep_work.get("sessions", [])),
+        )
+    )
+
+    context_switches = safe_int(
+        report.get("context_switches")
+    )
+
+    top_mission = (
+        report.get("top_mission")
+        or "Not identified"
+    )
+
+    productive_seconds = safe_float(
+        drift.get("productive_time")
+    )
+
+    productive_minutes = productive_seconds / 60
+
+    drift_index = round(
+        safe_float(drift.get("drift_index")),
+        1,
+    )
+
+    recovery_events = safe_int(
+        recovery.get("count")
+    )
+
+    recovery_cost_minutes = round(
+        safe_float(
+            recovery.get("total_recovery_cost_seconds")
+        )
+        / 60,
         1,
     )
 
     replay_events = replay.get("events", [])
+
     focus_lost_count = sum(
-        1 for event in replay_events
+        1
+        for event in replay_events
         if event.get("event_type") == "focus_lost"
     )
+
     recovered_count = sum(
-        1 for event in replay_events
+        1
+        for event in replay_events
         if event.get("event_type") == "recovered"
     )
 
-    executive_summary = report.get(
-        "executive_summary",
-        (
-            f"You completed {productive_minutes} productive minutes today. "
-            f"Your dominant mission was {top_mission}, with "
-            f"{context_switches} context switches."
-        ),
-    )
-
-    st.markdown(
-        f"""
-<div style="margin-bottom:24px;">
-<div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#22D3EE;text-transform:uppercase;margin-bottom:6px;">
-Daily Report · {today}
-</div>
-<div class="page-title">Your day, decoded.</div>
-<div class="page-sub">
-A complete summary of your productivity, focus quality, recovery, and next steps.
-</div>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # ── Hero summary ─────────────────────────────────────────────────────
-    score_color = (
-        "#34D399"
-        if overall >= 75
-        else "#FBBF24"
-        if overall >= 50
-        else "#F87171"
-    )
-
-    st.markdown(
-        f"""
-<div style="
-background:linear-gradient(135deg,rgba(34,211,238,.11),rgba(129,140,248,.07));
-border:1px solid rgba(34,211,238,.2);
-border-radius:24px;
-padding:30px;
-margin-bottom:22px;
-">
-<div style="display:flex;justify-content:space-between;align-items:center;gap:28px;">
-<div style="flex:1;">
-<div class="eyebrow">Executive Summary</div>
-<div style="font-size:18px;color:#E2E8F0;line-height:1.75;font-weight:600;">
-{executive_summary}
-</div>
-<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;">
-<span class="grade-pill">{productive_minutes} productive min</span>
-<span class="grade-pill">{deep_minutes} deep-work min</span>
-<span class="grade-pill">{context_switches} switches</span>
-<span class="grade-pill">Drift {drift_index}</span>
-</div>
-</div>
-
-<div style="
-width:145px;
-height:145px;
-border-radius:50%;
-background:conic-gradient(
-{score_color} {min(max(overall, 0), 100) * 3.6}deg,
-rgba(30,41,59,.9) 0deg
-);
-display:flex;
-align-items:center;
-justify-content:center;
-flex-shrink:0;
-">
-<div style="
-width:112px;
-height:112px;
-border-radius:50%;
-background:#0B1120;
-display:flex;
-align-items:center;
-justify-content:center;
-flex-direction:column;
-">
-<div style="
-font-size:38px;
-font-weight:900;
-font-family:'JetBrains Mono',monospace;
-color:{score_color};
-">
-{overall}
-</div>
-<div style="
-font-size:11px;
-font-weight:800;
-color:#94A3B8;
-letter-spacing:.08em;
-">
-GRADE {grade}
-</div>
-</div>
-</div>
-</div>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # ── Primary statistics ───────────────────────────────────────────────
-    c1, c2, c3, c4 = st.columns(4)
-
-    stats = [
-        (
-            "Productive Time",
-            f"{productive_minutes} min",
-            f"focus score {focus_score}",
-        ),
-        (
-            "Deep Work",
-            f"{deep_minutes} min",
-            f"{deep_sessions} session(s)",
-        ),
-        (
-            "Focus Lost",
-            str(focus_lost_count),
-            f"{recovered_count} recoveries",
-        ),
-        (
-            "Recovery Cost",
-            f"{recovery_cost} min",
-            f"{recovery_events} event(s)",
-        ),
-    ]
-
-    for col, (label, value, subtitle) in zip(
-        [c1, c2, c3, c4],
-        stats,
-    ):
-        with col:
-            st.markdown(
-                f"""
-<div class="stat-tile" style="margin-bottom:18px;">
-<div class="stat-label">{label}</div>
-<div class="stat-value" style="font-size:23px;">{value}</div>
-<div class="stat-sub">{subtitle}</div>
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-    # ── Score breakdown + AI coach ──────────────────────────────────────
-    left, right = st.columns([1.15, 1])
-
-    with left:
-        score_rows = [
-            ("Focus", focus_score, "#22D3EE"),
-            ("Mission Alignment", mission_score, "#818CF8"),
-            ("Recovery", recovery_score, "#34D399"),
-            ("Switch Control", switch_score, "#FB923C"),
-        ]
-
-        html = """
-<div class="card">
-<div class="eyebrow">Performance Breakdown</div>
-        """
-
-        for label, value, color in score_rows:
-            safe_value = min(max(value, 0), 100)
-
-            html += f"""
-<div style="margin-bottom:19px;">
-<div style="
-display:flex;
-justify-content:space-between;
-font-size:13px;
-color:#94A3B8;
-margin-bottom:7px;
-">
-<span>{label}</span>
-<span style="
-font-family:'JetBrains Mono',monospace;
-font-weight:700;
-color:#E2E8F0;
-">
-{value}%
-</span>
-</div>
-<div style="
-height:9px;
-background:rgba(30,41,59,.9);
-border-radius:999px;
-overflow:hidden;
-">
-<div style="
-width:{safe_value}%;
-height:100%;
-background:{color};
-border-radius:999px;
-"></div>
-</div>
-</div>
-            """
-
-        html += "</div>"
-        st.markdown(html, unsafe_allow_html=True)
-
-    with right:
-        advice = coach.get("advice", [])
-
-        st.markdown(
-            '<div class="card-cyan"><div class="eyebrow">AI Coach</div>',
-            unsafe_allow_html=True,
+    recovery_rate = (
+        round(
+            recovered_count / focus_lost_count * 100
         )
+        if focus_lost_count > 0
+        else 100
+    )
 
-        if advice:
-            primary = advice[0]
+    recommendations = report.get(
+        "recommendations",
+        [],
+    )
 
-            st.markdown(
-                f"""
-<div style="
-font-size:18px;
-font-weight:800;
-color:#F8FAFC;
-margin-bottom:12px;
-">
-🎯 Your priority for tomorrow
-</div>
+    advice = coach.get("advice", [])
 
-<div style="
-font-size:14px;
-color:#CBD5E1;
-line-height:1.7;
-margin-bottom:12px;
-">
-{primary.get("observation", "Your workday has been analysed.")}
-</div>
+    if isinstance(advice, list) and advice:
+        primary = advice[0]
 
-<div style="
-font-size:13px;
-color:#64748B;
-line-height:1.7;
-margin-bottom:16px;
-">
-{primary.get("impact", "")}
-</div>
+        if isinstance(primary, dict):
+            coach_observation = str(
+                primary.get(
+                    "observation",
+                    "Your workday has been analysed.",
+                )
+            ).strip()
 
-<div style="
-background:rgba(34,211,238,.08);
-border:1px solid rgba(34,211,238,.18);
-border-radius:14px;
-padding:15px;
-font-size:14px;
-color:#E2E8F0;
-line-height:1.65;
-">
-💡 {primary.get("suggestion", "Protect one focused work block tomorrow.")}
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
+            coach_impact = str(
+                primary.get("impact", "")
+            ).strip()
+
+            coach_suggestion = str(
+                primary.get(
+                    "suggestion",
+                    "Protect one focused work block tomorrow.",
+                )
+            ).strip()
         else:
-            empty("No coaching advice available yet.")
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # ── Mission + recovery story ────────────────────────────────────────
-    left, right = st.columns(2)
-
-    with left:
-        st.markdown(
-            f"""
-<div class="card-purple">
-<div class="eyebrow">Dominant Mission</div>
-<div style="
-font-size:25px;
-font-weight:900;
-color:#F8FAFC;
-margin-bottom:10px;
-">
-{top_mission}
-</div>
-<div style="
-font-size:13px;
-color:#64748B;
-line-height:1.7;
-">
-This was the primary focus area detected across your tracked sessions.
-</div>
-</div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with right:
-        recovery_rate = 0
-
-        if focus_lost_count:
-            recovery_rate = round(
-                recovered_count / focus_lost_count * 100,
-                1,
+            coach_observation = str(primary)
+            coach_impact = ""
+            coach_suggestion = (
+                "Protect one focused work block tomorrow."
             )
-
-        recovery_color = (
-            "#34D399"
-            if recovery_rate >= 75
-            else "#FBBF24"
-            if recovery_rate >= 40
-            else "#F87171"
+    else:
+        coach_observation = (
+            "Drift needs more tracked activity to create "
+            "a reliable coaching summary."
+        )
+        coach_impact = ""
+        coach_suggestion = (
+            "Keep the tracker running and complete one focused block."
         )
 
-        st.markdown(
-            f"""
-<div class="card">
-<div class="eyebrow">Recovery Story</div>
-<div style="
-font-size:38px;
-font-weight:900;
-font-family:'JetBrains Mono',monospace;
-color:{recovery_color};
-margin-bottom:8px;
-">
-{recovery_rate}%
-</div>
-<div style="
-font-size:13px;
-color:#64748B;
-line-height:1.7;
-">
-You recovered after {recovered_count} of {focus_lost_count}
-detected focus-loss sessions.
-</div>
-</div>
-            """,
-            unsafe_allow_html=True,
+    # ------------------------------------------------------------------
+    # Human-readable summary
+    # ------------------------------------------------------------------
+
+    if productive_minutes == 0:
+        summary_title = "There is not enough activity for a full report yet."
+        summary_text = (
+            "Keep the tracker running while you work. Drift will build "
+            "a report once it has enough meaningful activity."
         )
 
-    # ── Focus timeline summary ───────────────────────────────────────────
-    st.markdown(
-        '<div class="card"><div class="eyebrow">Focus Timeline Summary</div>',
-        unsafe_allow_html=True,
-    )
+    elif overall >= 80:
+        summary_title = "You had a strong and focused workday."
+        summary_text = (
+            f"You completed {format_minutes(productive_minutes)} of productive "
+            f"work, including {format_minutes(deep_minutes)} of deep work. "
+            "Your attention stayed relatively steady."
+        )
 
-    if replay_events:
-        color_map = {
-            "start": "#22D3EE",
-            "focused": "#818CF8",
-            "recovered": "#34D399",
-            "focus_lost": "#F87171",
-        }
+    elif overall >= 60:
+        summary_title = "You made useful progress today."
+        summary_text = (
+            f"You completed {format_minutes(productive_minutes)} of productive "
+            f"work. A few attention changes reduced the length of your "
+            "focus sessions, but the day still moved forward."
+        )
 
-        event_blocks = []
-
-        for event in replay_events[:120]:
-            event_type = event.get("event_type", "focused")
-            color = color_map.get(event_type, "#64748B")
-            mission = event.get("mission", "Unknown")
-            duration = event.get("duration_minutes", 0)
-
-            event_blocks.append(
-                f'<span title="{mission} · {duration} min" '
-                f'style="display:inline-block;width:14px;height:14px;'
-                f'border-radius:4px;background:{color};"></span>'
-            )
-
-        blocks_html = "".join(event_blocks)
-
-        st.markdown(
-            f"""
-<div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:4px;">
-{blocks_html}
-</div>
-<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#64748B;margin-top:18px;">
-<span>🚀 Start</span>
-<span>💻 Focused</span>
-<span>✅ Recovered</span>
-<span>⚠️ Focus Lost</span>
-</div>
-            """,
-            unsafe_allow_html=True,
+    elif overall >= 40:
+        summary_title = "Your workday was productive in parts."
+        summary_text = (
+            f"You completed {format_minutes(productive_minutes)} of productive "
+            f"work, but {context_switches} attention changes made it harder "
+            "to build longer focus sessions."
         )
 
     else:
-        empty("No timeline activity available.")
+        summary_title = "Your workday felt fragmented."
+        summary_text = (
+            f"You completed {format_minutes(productive_minutes)} of productive "
+            f"work, but repeated interruptions prevented longer deep-focus "
+            "sessions from developing."
+        )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    # ------------------------------------------------------------------
+    # Header
+    # ------------------------------------------------------------------
 
-    # ── Recommendations ──────────────────────────────────────────────────
-    st.markdown(
-        '<div class="card"><div class="eyebrow">Recommendations for Tomorrow</div>',
-        unsafe_allow_html=True,
+    section_header(
+        title="Your day, decoded",
+        description=(
+            "A simple end-of-day summary of your focus, recovery, "
+            "and what to improve tomorrow."
+        ),
+        eyebrow=f"Daily report · {today}",
+    )
+
+    # ------------------------------------------------------------------
+    # Hero summary
+    # ------------------------------------------------------------------
+
+    with st.container(border=True):
+        hero_left, hero_right = st.columns(
+            [3, 1],
+            gap="large",
+        )
+
+        with hero_left:
+            st.markdown(
+                f"## {summary_title}"
+            )
+
+            st.write(summary_text)
+
+            if top_mission not in {
+                "Not identified",
+                "Unknown",
+                "Unclassified Mission",
+                "—",
+            }:
+                st.caption(
+                    f"Your main mission was **{top_mission}**."
+                )
+            else:
+                st.caption(
+                    "Your main mission could not be classified reliably."
+                )
+
+        with hero_right:
+            st.metric(
+                "Final score",
+                f"{overall}/100",
+            )
+
+            st.caption(
+                f"Grade {grade} · Drift index {drift_index}"
+            )
+
+    recommendation_card(
+        text=coach_suggestion,
+        label="Tomorrow's priority",
+        icon="🎯",
+    )
+
+    # ------------------------------------------------------------------
+    # Key numbers
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Key numbers",
+        description=(
+            "The four metrics that best explain your day."
+        ),
+        eyebrow="Today at a glance",
+    )
+
+    metric_1, metric_2, metric_3, metric_4 = st.columns(
+        4,
+        gap="medium",
+    )
+
+    with metric_1:
+        metric_card(
+            icon="⏱️",
+            title="Productive time",
+            value=format_minutes(productive_minutes),
+            subtitle=(
+                f"Focus score: {focus_score}/100."
+            ),
+            badge="Today",
+        )
+
+    with metric_2:
+        metric_card(
+            icon="🔥",
+            title="Deep work",
+            value=format_minutes(deep_minutes),
+            subtitle=(
+                f"{deep_sessions} uninterrupted "
+                f"{'session' if deep_sessions == 1 else 'sessions'}."
+            ),
+            badge="Focus",
+        )
+
+    with metric_3:
+        metric_card(
+            icon="⚠️",
+            title="Focus interruptions",
+            value=str(focus_lost_count),
+            subtitle=(
+                f"{recovered_count} recoveries recorded."
+            ),
+            trend=(
+                "Low interruption level"
+                if focus_lost_count <= 2
+                else "Attention was interrupted"
+            ),
+            trend_type=(
+                "positive"
+                if focus_lost_count <= 2
+                else "negative"
+            ),
+            badge="Detected",
+        )
+
+    with metric_4:
+        metric_card(
+            icon="♻️",
+            title="Recovery cost",
+            value=f"{recovery_cost_minutes} min",
+            subtitle=(
+                f"{recovery_events} recovery "
+                f"{'event' if recovery_events == 1 else 'events'}."
+            ),
+            badge="Estimate",
+        )
+
+    # ------------------------------------------------------------------
+    # Performance and coaching
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Performance breakdown",
+        description=(
+            "See which abilities helped or limited your productivity."
+        ),
+        eyebrow="Score analysis",
+    )
+
+    performance_col, coach_col = st.columns(
+        [1.1, 1],
+        gap="medium",
+    )
+
+    with performance_col:
+        with st.container(border=True):
+            score_rows = [
+                (
+                    "Focus consistency",
+                    focus_score,
+                    "How steadily you stayed on useful work.",
+                ),
+                (
+                    "Mission alignment",
+                    mission_score,
+                    "How much activity supported your main objective.",
+                ),
+                (
+                    "Recovery ability",
+                    recovery_score,
+                    "How effectively you returned after interruptions.",
+                ),
+                (
+                    "Switch control",
+                    switch_score,
+                    "How well you limited unnecessary context changes.",
+                ),
+            ]
+
+            for index, (
+                label,
+                value,
+                explanation,
+            ) in enumerate(score_rows):
+                label_col, value_col = st.columns(
+                    [3, 1]
+                )
+
+                with label_col:
+                    st.markdown(f"**{label}**")
+
+                with value_col:
+                    st.markdown(f"**{value}/100**")
+
+                st.progress(
+                    value / 100
+                )
+
+                st.caption(explanation)
+
+                if index < len(score_rows) - 1:
+                    st.divider()
+
+    with coach_col:
+        with st.container(border=True):
+            st.markdown("### 🤖 Drift Coach")
+
+            st.markdown(
+                f"#### {coach_observation}"
+            )
+
+            if coach_impact:
+                st.write(coach_impact)
+
+            st.success(
+                f"💡 {coach_suggestion}"
+            )
+
+    # ------------------------------------------------------------------
+    # Mission and recovery
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Your work story",
+        description=(
+            "Understand what received your attention and how well "
+            "you returned after interruptions."
+        ),
+        eyebrow="Daily interpretation",
+    )
+
+    mission_col, recovery_col = st.columns(
+        2,
+        gap="medium",
+    )
+
+    with mission_col:
+        with st.container(border=True):
+            st.markdown("### 🎯 Dominant mission")
+
+            st.markdown(
+                f"## {top_mission}"
+            )
+
+            st.write(
+                "This was the main focus area detected across "
+                "your tracked activity."
+            )
+
+            if top_mission in {
+                "Not identified",
+                "Unknown",
+                "Unclassified Mission",
+                "—",
+            }:
+                st.warning(
+                    "A large part of your activity is still unclassified."
+                )
+
+    with recovery_col:
+        with st.container(border=True):
+            st.markdown("### ♻️ Recovery story")
+
+            st.metric(
+                "Recovery rate",
+                f"{recovery_rate}%",
+            )
+
+            st.write(
+                f"You recovered after {recovered_count} of "
+                f"{focus_lost_count} detected interruptions."
+            )
+
+            if focus_lost_count == 0:
+                st.success(
+                    "No meaningful focus-loss event was detected."
+                )
+            elif recovery_rate >= 75:
+                st.success(
+                    "You usually returned to focused work successfully."
+                )
+            elif recovery_rate >= 40:
+                st.warning(
+                    "You recovered after some interruptions, "
+                    "but several remained unresolved."
+                )
+            else:
+                st.error(
+                    "Many interruptions ended without a clear return "
+                    "to focused work."
+                )
+
+    # ------------------------------------------------------------------
+    # Timeline
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Your day at a glance",
+        description=(
+            "A compact summary of focus, interruption, and recovery events."
+        ),
+        eyebrow="Timeline",
+    )
+
+    with st.container(border=True):
+        if replay_events:
+            displayed_events = replay_events[:30]
+
+            for index, event in enumerate(
+                displayed_events,
+                start=1,
+            ):
+                event_type = str(
+                    event.get(
+                        "event_type",
+                        "focused",
+                    )
+                ).lower()
+
+                event_icons = {
+                    "start": "🚀",
+                    "focused": "💻",
+                    "deep_work": "🔥",
+                    "recovered": "✅",
+                    "focus_lost": "⚠️",
+                    "idle": "🌙",
+                }
+
+                event_labels = {
+                    "start": "Started working",
+                    "focused": "Focused activity",
+                    "deep_work": "Deep work",
+                    "recovered": "Recovered focus",
+                    "focus_lost": "Focus interrupted",
+                    "idle": "Away from work",
+                }
+
+                icon = event_icons.get(
+                    event_type,
+                    "•",
+                )
+
+                label = event_labels.get(
+                    event_type,
+                    "Activity",
+                )
+
+                mission = (
+                    event.get("mission")
+                    or "Unknown mission"
+                )
+
+                event_time = (
+                    event.get("time")
+                    or event.get("start_time")
+                    or ""
+                )
+
+                duration = safe_float(
+                    event.get("duration_minutes")
+                )
+
+                row_left, row_right = st.columns(
+                    [4, 1]
+                )
+
+                with row_left:
+                    st.markdown(
+                        f"**{icon} {label} · {mission}**"
+                    )
+
+                with row_right:
+                    details = []
+
+                    if event_time:
+                        details.append(str(event_time))
+
+                    if duration:
+                        details.append(f"{duration:g} min")
+
+                    st.caption(
+                        " · ".join(details)
+                        if details
+                        else " "
+                    )
+
+                if index < len(displayed_events):
+                    st.divider()
+
+            if len(replay_events) > 30:
+                st.caption(
+                    f"Showing 30 of {len(replay_events)} events."
+                )
+
+        else:
+            st.info(
+                "No replay events are available yet."
+            )
+
+    # ------------------------------------------------------------------
+    # Tomorrow's focus plan
+    # ------------------------------------------------------------------
+
+    section_header(
+        title="Tomorrow's focus plan",
+        description=(
+            "A few clear actions for your next workday."
+        ),
+        eyebrow="Recommendations",
     )
 
     if not recommendations:
         recommendations = [
+            coach_suggestion,
             "Begin with one uninterrupted 30-minute focus block.",
             "Avoid switching applications while working on your main mission.",
             "Schedule distracting communication into specific time windows.",
-            "Take a deliberate short break before fatigue becomes drift.",
         ]
 
-    for index, recommendation in enumerate(recommendations[:6], start=1):
-        st.markdown(
-            f"""
-<div style="
-display:flex;
-align-items:flex-start;
-gap:13px;
-padding:13px 0;
-border-bottom:1px solid rgba(148,163,184,.06);
-">
-<div style="
-width:26px;
-height:26px;
-border-radius:8px;
-background:rgba(34,211,238,.1);
-border:1px solid rgba(34,211,238,.16);
-display:flex;
-align-items:center;
-justify-content:center;
-color:#22D3EE;
-font-size:12px;
-font-weight:800;
-flex-shrink:0;
-">
-{index}
-</div>
-<div style="
-font-size:14px;
-color:#CBD5E1;
-line-height:1.65;
-padding-top:2px;
-">
-{recommendation}
-</div>
-</div>
-            """,
-            unsafe_allow_html=True,
+    with st.container(border=True):
+        for index, recommendation in enumerate(
+            recommendations[:5],
+            start=1,
+        ):
+            st.markdown(
+                f"### {index}. {recommendation}"
+            )
+
+            if index < len(recommendations[:5]):
+                st.divider()
+
+    # ------------------------------------------------------------------
+    # End message
+    # ------------------------------------------------------------------
+
+    if overall >= 75:
+        final_message = (
+            "Strong day. Protect the habits that created "
+            "your focused sessions."
+        )
+    elif overall >= 50:
+        final_message = (
+            "A mixed day. Tomorrow, reduce switching and "
+            "protect one clear mission."
+        )
+    else:
+        final_message = (
+            "Today was fragmented. Reset tomorrow with one "
+            "small, uninterrupted goal."
         )
 
-    st.markdown("</div>", unsafe_allow_html=True)
-    
-    
-    # ── End-of-day message ───────────────────────────────────────────────
-    message = (
-        "Strong day. Protect the habits that created your focused sessions."
-        if overall >= 75
-        else
-        "A mixed day. Tomorrow, reduce switching and protect one clear mission."
-        if overall >= 50
-        else
-        "Today was fragmented. Reset tomorrow with one small, uninterrupted goal."
-    )
-
-    st.markdown(
-        f"""
-<div style="
-text-align:center;
-padding:26px;
-border-radius:18px;
-border:1px solid rgba(148,163,184,.08);
-background:rgba(13,20,35,.55);
-margin-top:4px;
-">
-<div style="
-font-size:10px;
-font-weight:800;
-letter-spacing:.12em;
-text-transform:uppercase;
-color:#22D3EE;
-margin-bottom:9px;
-">
-End of Report
-</div>
-<div style="
-font-size:17px;
-font-weight:700;
-color:#E2E8F0;
-">
-{message}
-</div>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
+    with st.container(border=True):
+        st.caption("END OF REPORT")
+        st.markdown(
+            f"## {final_message}"
+        )
     # ── Page 5: Replay ────────────────────────────────────────────────────────────
 
 def render_replay():
