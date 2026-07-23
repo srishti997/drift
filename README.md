@@ -1,205 +1,397 @@
 # 🧠 Drift — Human Observability Platform
 
-> Most productivity tools track time. Drift tracks **intent**.
+> **Most productivity tools measure time. Drift measures attention, intent, and behavior.**
 
-Drift is a behavioral intelligence system that runs silently in the background, watches what you're actually doing on your computer, and figures out *why* you're doing it — not just *what* app is open. It detects deep work, measures focus loss from context switching, infers your active mission, and generates a personalized AI coaching report at the end of the day.
+Drift is an AI-inspired behavioral intelligence platform that observes desktop activity, understands what you're trying to accomplish, identifies how your attention changes throughout the day, and converts raw activity into actionable productivity insights.
 
----
-
-## The Problem
-
-Time trackers tell you that you spent 3 hours on Chrome. They don't tell you that you opened YouTube 7 times during a coding session, abandoned your mission twice, and only hit one real deep work block. Drift does.
+Instead of simply telling you **how long** you spent in an application, Drift explains **why your focus shifted**, **where productivity was lost**, and **how you can improve tomorrow**.
 
 ---
 
-## How It Works
+#  Why Drift?
+
+Traditional productivity tools answer questions like:
+
+- How much time did I spend on Chrome?
+- How long was VS Code open?
+- How many hours did I work?
+
+Drift answers questions that are far more meaningful:
+
+- Was I actually focused?
+- What interrupted my work?
+- Did I recover after distractions?
+- How many deep work sessions did I complete?
+- Which mission dominated my day?
+- What behavioral patterns reduced my productivity?
+
+Drift transforms passive activity logs into behavioral intelligence.
+
+---
+
+#  Key Highlights
+
+- 🧠 Intent-aware productivity tracking
+- 📊 Real-time desktop activity monitoring
+- 🎯 Goal and mission inference
+- 🔥 Deep work detection
+- 🔄 Context switch analysis
+- 🧩 Behavioral pattern recognition
+- 🤖 AI-powered coaching engine
+- 📋 Executive daily productivity reports
+- 📈 Interactive analytics dashboard
+
+---
+
+#  System Architecture
 
 ```
-Keystroke + Mouse Input (pynput)
-        +
-Active Window (win32gui + psutil)
-        ↓
-Activity Classifier → CODING / LEARNING / BROWSING / ENTERTAINMENT / IDLE
-        ↓
-Intent Engine → infers goal from window title keywords (e.g. "Building Drift", "Career Development")
-        ↓
-Mission Engine → maps goals to missions (Build Drift / Career Growth / Skill Development / Break)
-        ↓
-Behavior Analysis Engines:
-  ├── Deep Work Engine     → detects 30+ min uninterrupted productive sessions
-  ├── Context Switch Engine → tracks goal changes, flags distraction switches
-  ├── Pattern Engine       → finds Mission Abandonment, Recovery, App Ping-Pong
-  ├── Drift Engine         → calculates Drift Index (fragmentation score 0–100)
-  └── Productivity Score Engine → weighted score: Focus (40%) + Mission (25%) + Recovery (20%) + Switch (15%)
-        ↓
-Coach Engine → generates observation/impact/suggestion advice cards
-        ↓
-Daily Report Engine → executive summary + timeline + recommendations
-        ↓
-Streamlit Dashboard → live visualization of all signals
+Keyboard + Mouse
+        │
+Active Window Detection
+        │
+        ▼
+Activity Collection Layer
+(pynput • psutil • pywin32)
+        │
+        ▼
+Activity Classification
+(Coding • Learning • Browsing • Communication • Idle)
+        │
+        ▼
+Intent Engine
+        │
+        ▼
+Mission Engine
+        │
+        ├──────────────┐
+        │              │
+        ▼              ▼
+Deep Work        Context Switching
+Engine           Engine
+
+        │              │
+        ├──────────────┤
+        ▼
+Behavior Pattern Engine
+        │
+        ▼
+Productivity Analytics
+        │
+        ▼
+AI Coach + Daily Report
+        │
+        ▼
+FastAPI Backend
+        │
+        ▼
+Streamlit Dashboard
 ```
 
 ---
 
-## Features
+#  Core Features
 
-### 🎯 Activity Intelligence
-- Tracks active window, app name, keystrokes, and mouse clicks every 10 seconds
-- Classifies activity into: `CODING`, `LEARNING`, `BROWSING`, `ENTERTAINMENT`, `COMMUNICATION`, `IDLE`
-- Detects idle states automatically (zero keyboard + mouse input)
+## Activity Intelligence
 
-### 🧠 Intent & Mission Inference
-- Infers user intent from window title keywords — e.g. `"tracker.py — VS Code"` → Intent: *Building Drift*, Goal: *Develop Drift platform*
-- Maps goals to high-level missions: `Build Drift`, `Career Growth`, `Skill Development`, `Communication`, `Break / Distraction`
-- Confidence-scored matching with fallback rules by activity type
+Drift continuously monitors desktop activity and records:
 
-### 📊 Drift Index
-- Proprietary fragmentation score (0–100) combining distraction ratio, idle ratio, and context switch penalty
-- `< 25` = Stable · `25–50` = Minor Drift · `50–75` = Significant · `75+` = Critical
+- Active application
+- Window title
+- Keyboard activity
+- Mouse activity
+- Session duration
+- Idle periods
 
-### 🔬 Deep Work Detection
-- Identifies continuous productive sessions ≥ 30 minutes with no distraction interruptions
-- Tracks intent breakdown and app usage within each deep work block
+Activity is automatically classified into categories such as:
 
-### 🔁 Context Switch Analysis
-- Detects every goal change in the activity stream
-- Separates goal-aligned switches from distraction switches
-- Estimates focus loss: 2 minutes per context switch
-
-### 🕵️ Behavioral Pattern Recognition
-- **Mission Abandonment** — left a productive mission mid-way
-- **Mission Recovery** — returned to a productive mission after distraction
-- **App Ping-Pong** — bounced between two apps more than 3 times
-
-### 🤖 AI Coach
-- Rule-based coaching engine that generates structured `observation → impact → suggestion` cards
-- Triggers specific advice based on low deep work time, high distraction switches, abandonment patterns, and strong mission alignment
-- No LLM dependency — fully local and deterministic
-
-### 📋 Daily Report
-- Executive summary of the day's work pattern
-- Cognitive timeline: mission blocks with goal and app breakdown
-- Actionable recommendations personalized to detected patterns
-
-### 📈 Streamlit Dashboard
-- Live productivity score with gauge chart (Plotly)
-- Mission breakdown donut chart
-- Cognitive timeline view
-- AI Coach card panel
-- Daily report with recommendations
+- Coding
+- Learning
+- Browsing
+- Communication
+- Entertainment
+- Idle
 
 ---
 
-## Tech Stack
+## Intent Inference
 
-| Layer | Technology |
-|---|---|
-| Activity Collection | `pynput`, `psutil`, `pywin32` |
-| Backend API | `FastAPI`, `Pydantic` |
-| Data Layer | JSON persistence |
-| Visualization | `Streamlit`, `Plotly`, `Pandas` |
-| Language | Python 3.10+ |
+Drift doesn't stop at application tracking.
 
-> ⚠️ **Windows only** — relies on `pywin32` (`win32gui`, `win32process`) for active window detection.
+It infers **why** you're using an application.
+
+Example:
+
+```
+VS Code
+Window:
+tracker.py — Visual Studio Code
+
+↓
+
+Intent:
+Building Drift
+
+↓
+
+Goal:
+Develop Human Observability Platform
+
+↓
+
+Mission:
+Build Drift
+```
 
 ---
 
-## Project Structure
+## Mission Intelligence
+
+Goals are grouped into higher-level missions including:
+
+- Build Drift
+- Career Growth
+- Skill Development
+- Communication
+- Break / Distraction
+
+This allows Drift to measure productivity at a behavioral level instead of an application level.
+
+---
+
+## Deep Work Detection
+
+Drift identifies uninterrupted productive sessions by analyzing:
+
+- Mission continuity
+- Intent stability
+- Activity duration
+- Distraction interruptions
+
+It highlights meaningful focus sessions instead of simply measuring screen time.
+
+---
+
+## Context Switch Analysis
+
+Drift detects meaningful attention changes throughout the day.
+
+It distinguishes between:
+
+- Productive transitions
+- Distraction switches
+- Recoveries
+- Fragmented work
+
+instead of counting every application change equally.
+
+---
+
+## Behavioral Pattern Detection
+
+Drift identifies recurring productivity behaviors such as:
+
+- Mission Abandonment
+- Mission Recovery
+- App Ping-Pong
+- Repeated distractions
+- Focus fragmentation
+
+These patterns are used to generate personalized coaching.
+
+---
+
+## AI Coach
+
+Drift includes a deterministic coaching engine that converts analytics into actionable advice.
+
+Each recommendation explains:
+
+- Observation
+- Impact
+- Suggested improvement
+
+The coaching engine works locally without requiring an LLM.
+
+---
+
+## Daily Report
+
+At the end of each day Drift automatically generates:
+
+- Executive Summary
+- Productivity Score
+- Mission Breakdown
+- Deep Work Summary
+- Attention Changes
+- Timeline
+- Personalized Recommendations
+
+---
+
+#  Dashboard
+
+The Streamlit dashboard provides:
+
+- Executive Overview
+- Deep Dive Analytics
+- Intelligence Dashboard
+- History
+- Replay
+- AI Coach
+- Daily Report
+- Productivity Goals
+
+---
+
+#  Technology Stack
+
+| Category | Technologies |
+|-----------|--------------|
+| Language | Python |
+| Backend | FastAPI, Pydantic |
+| Frontend | Streamlit |
+| Visualization | Plotly, Pandas |
+| Desktop Monitoring | pynput, psutil, pywin32 |
+| Storage | JSON |
+| APIs | REST |
+
+---
+
+#  Project Structure
 
 ```
 drift/
+│
 ├── agent/
-│   ├── tracker.py            # Activity collection loop (every 10s)
-│   └── app_classifier.py     # Rule-based app → activity type classifier
+│   ├── tracker.py
+│   ├── app_classifier.py
+│   └── local_store.py
+│
 ├── backend/
-│   ├── main.py               # FastAPI app with all endpoints
-│   ├── intent_engine.py      # Keyword-based intent + goal inference
-│   ├── mission_engine.py     # Goal → Mission mapping
-│   ├── drift_engine.py       # Drift Index calculation
-│   ├── deep_work_engine.py   # Deep work session detection
-│   ├── context_switch_engine.py  # Context switch + distraction analysis
-│   ├── pattern_engine.py     # Behavioral pattern recognition
-│   ├── productivity_score_engine.py  # Weighted productivity score
-│   ├── coach_engine.py       # Rule-based AI coaching
-│   ├── daily_report_engine.py # End-of-day report generation
-│   ├── timeline_engine.py    # Cognitive timeline builder
-│   ├── goal_engine.py        # Goal summary aggregation
-│   ├── session_builder.py    # Session segmentation
-│   └── storage.py            # JSON read/write
+│   ├── main.py
+│   ├── context_switch_engine.py
+│   ├── deep_work_engine.py
+│   ├── drift_engine.py
+│   ├── mission_engine.py
+│   ├── productivity_score_engine.py
+│   ├── daily_report_engine.py
+│   ├── coach_engine.py
+│   ├── replay_engine.py
+│   ├── history_engine.py
+│   └── ...
+│
+├── ui/
+│
 ├── data/
-│   └── activity_logs.json    # Persisted activity data
-├── dashboard.py              # Streamlit dashboard
-└── requirements.txt
+│
+├── dashboard.py
+├── requirements.txt
+└── README.md
 ```
 
 ---
 
-## Getting Started
+#  Getting Started
 
-### 1. Clone the repo
+## Clone the repository
+
 ```bash
 git clone https://github.com/srishti997/drift.git
 cd drift
 ```
 
-### 2. Install dependencies
+## Install dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Start the FastAPI backend
+## Start the backend
+
 ```bash
 uvicorn backend.main:app --reload
 ```
 
-### 4. Start the activity tracker (new terminal)
+## Start the activity tracker
+
 ```bash
 cd agent
 python tracker.py
 ```
 
-### 5. Open the dashboard (new terminal)
+## Launch the dashboard
+
 ```bash
 streamlit run dashboard.py
 ```
 
-The dashboard will be live at `http://localhost:8501`. Let the tracker run for 10–15 minutes to collect enough data for meaningful analysis.
-
----
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/activity` | Log a new activity event |
-| `GET` | `/score` | Weighted productivity score |
-| `GET` | `/drift` | Drift Index + focus score |
-| `GET` | `/missions` | Mission breakdown |
-| `GET` | `/intent` | Per-activity intent inference |
-| `GET` | `/deep-work` | Deep work session analysis |
-| `GET` | `/context-switches` | Context switch + distraction stats |
-| `GET` | `/patterns` | Behavioral pattern detection |
-| `GET` | `/timeline` | Cognitive timeline |
-| `GET` | `/coach` | AI coaching advice |
-| `GET` | `/daily-report` | Full daily report |
-
----
-
-## Productivity Score Formula
+Open:
 
 ```
-Score = (Focus × 0.40) + (Mission × 0.25) + (Recovery × 0.20) + (Switch × 0.15)
-
-Focus Score    → based on total deep work minutes (≥120 min = 100)
-Mission Score  → based on top mission dominance percentage
-Recovery Score → recovery count / (recovery + abandonment count)
-Switch Score   → penalized by total context switches (0 = 100, >20 = 25)
+http://localhost:8501
 ```
 
-Grades: `A+ (≥95)` · `A (≥85)` · `B (≥75)` · `C (≥65)` · `D (≥50)` · `F (<50)`
+Allow Drift to collect activity for several minutes before viewing analytics.
 
 ---
 
-## Built By
+#  API Endpoints
 
-Srishti Gupta · [GitHub](https://github.com/srishti997) · [LinkedIn](https://linkedin.com/in/srishtigupta997)
+| Endpoint | Description |
+|------------|------------|
+| `/activity` | Store activity logs |
+| `/summary` | Overall activity summary |
+| `/drift` | Drift metrics |
+| `/missions` | Mission analytics |
+| `/intent` | Intent inference |
+| `/deep-work` | Deep work analysis |
+| `/context-switches` | Attention changes |
+| `/patterns` | Behavioral patterns |
+| `/coach` | AI coaching |
+| `/daily-report` | Executive report |
+| `/history` | Historical analytics |
+| `/replay` | Day replay |
+| `/goals` | Productivity goals |
+
+---
+
+#  Engineering Decisions
+
+Some notable design decisions behind Drift:
+
+- Modular engine architecture where each behavioral analysis runs independently.
+- Rule-based intent inference to provide deterministic and explainable outputs.
+- FastAPI backend exposing reusable analytics APIs.
+- Streamlit frontend separated from business logic.
+- Human-readable coaching instead of opaque productivity scores.
+- Local-first design with no mandatory cloud dependency.
+
+---
+
+#  Future Roadmap
+
+- Desktop widget
+- Browser extension
+- Weekly & monthly reports
+- Calendar integration
+- Cross-device synchronization
+- LLM-powered behavioral coach
+- Team productivity analytics
+
+---
+
+#  What I Learned
+
+Building Drift strengthened my understanding of:
+
+- Behavioral analytics
+- Human-computer interaction
+- FastAPI architecture
+- Desktop activity monitoring
+- Productivity systems
+- Software modularization
+- Data visualization
+- Designing explainable AI-inspired systems
+
+---
