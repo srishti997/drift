@@ -1,0 +1,842 @@
+[
+    {
+        "app_name": "Code.exe",
+        "window_title": "feature_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T04:30:00+00:00",
+        "end_time": "2026-07-20T04:35:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 6,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "feature_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T04:35:00+00:00",
+        "end_time": "2026-07-20T04:40:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 8,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "feature_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T04:40:00+00:00",
+        "end_time": "2026-07-20T04:45:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 10,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "feature_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T04:45:00+00:00",
+        "end_time": "2026-07-20T04:50:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 6,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "feature_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T04:50:00+00:00",
+        "end_time": "2026-07-20T04:55:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 8,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "feature_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T04:55:00+00:00",
+        "end_time": "2026-07-20T05:00:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 10,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "feature_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T05:00:00+00:00",
+        "end_time": "2026-07-20T05:05:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 6,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "feature_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T05:05:00+00:00",
+        "end_time": "2026-07-20T05:10:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 8,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "feature_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T05:10:00+00:00",
+        "end_time": "2026-07-20T05:15:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 10,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "feature_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T05:15:00+00:00",
+        "end_time": "2026-07-20T05:20:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 6,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "feature_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T05:20:00+00:00",
+        "end_time": "2026-07-20T05:25:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 8,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "feature_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T05:25:00+00:00",
+        "end_time": "2026-07-20T05:30:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 10,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "FastAPI Documentation - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T05:30:00+00:00",
+        "end_time": "2026-07-20T05:35:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 2,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "FastAPI Documentation - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T05:35:00+00:00",
+        "end_time": "2026-07-20T05:40:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 4,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "FastAPI Documentation - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T05:40:00+00:00",
+        "end_time": "2026-07-20T05:45:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 6,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "FastAPI Documentation - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T05:45:00+00:00",
+        "end_time": "2026-07-20T05:50:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 2,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "api_routes.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T05:50:00+00:00",
+        "end_time": "2026-07-20T05:55:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 8,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "api_routes.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T05:55:00+00:00",
+        "end_time": "2026-07-20T06:00:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 10,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "api_routes.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T06:00:00+00:00",
+        "end_time": "2026-07-20T06:05:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 12,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "api_routes.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T06:05:00+00:00",
+        "end_time": "2026-07-20T06:10:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 8,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "api_routes.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T06:10:00+00:00",
+        "end_time": "2026-07-20T06:15:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 10,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "api_routes.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T06:15:00+00:00",
+        "end_time": "2026-07-20T06:20:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 12,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "api_routes.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T06:20:00+00:00",
+        "end_time": "2026-07-20T06:25:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 8,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "api_routes.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T06:25:00+00:00",
+        "end_time": "2026-07-20T06:30:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 10,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Slack.exe",
+        "window_title": "Project Stand-up - Slack",
+        "activity_type": "COMMUNICATION",
+        "start_time": "2026-07-20T06:30:00+00:00",
+        "end_time": "2026-07-20T06:35:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 1,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Slack.exe",
+        "window_title": "Project Stand-up - Slack",
+        "activity_type": "COMMUNICATION",
+        "start_time": "2026-07-20T06:35:00+00:00",
+        "end_time": "2026-07-20T06:40:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 3,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Slack.exe",
+        "window_title": "Project Stand-up - Slack",
+        "activity_type": "COMMUNICATION",
+        "start_time": "2026-07-20T06:40:00+00:00",
+        "end_time": "2026-07-20T06:45:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 5,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Slack.exe",
+        "window_title": "Project Stand-up - Slack",
+        "activity_type": "COMMUNICATION",
+        "start_time": "2026-07-20T06:45:00+00:00",
+        "end_time": "2026-07-20T06:50:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 1,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "Machine Learning Notes - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T06:50:00+00:00",
+        "end_time": "2026-07-20T06:55:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 3,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "Machine Learning Notes - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T06:55:00+00:00",
+        "end_time": "2026-07-20T07:00:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 5,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "Machine Learning Notes - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T07:00:00+00:00",
+        "end_time": "2026-07-20T07:05:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 7,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "Machine Learning Notes - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T07:05:00+00:00",
+        "end_time": "2026-07-20T07:10:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 3,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "Machine Learning Notes - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T07:10:00+00:00",
+        "end_time": "2026-07-20T07:15:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 5,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "Machine Learning Notes - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T07:15:00+00:00",
+        "end_time": "2026-07-20T07:20:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 7,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T07:20:00+00:00",
+        "end_time": "2026-07-20T07:25:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 9,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T07:25:00+00:00",
+        "end_time": "2026-07-20T07:30:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 11,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T07:30:00+00:00",
+        "end_time": "2026-07-20T07:35:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 13,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T07:35:00+00:00",
+        "end_time": "2026-07-20T07:40:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 9,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T07:40:00+00:00",
+        "end_time": "2026-07-20T07:45:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 11,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T07:45:00+00:00",
+        "end_time": "2026-07-20T07:50:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 13,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T07:50:00+00:00",
+        "end_time": "2026-07-20T07:55:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 9,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T07:55:00+00:00",
+        "end_time": "2026-07-20T08:00:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 11,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T08:00:00+00:00",
+        "end_time": "2026-07-20T08:05:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 13,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T08:05:00+00:00",
+        "end_time": "2026-07-20T08:10:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 9,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T08:10:00+00:00",
+        "end_time": "2026-07-20T08:15:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 11,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T08:15:00+00:00",
+        "end_time": "2026-07-20T08:20:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 13,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "YouTube - Music Playlist",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T08:20:00+00:00",
+        "end_time": "2026-07-20T08:25:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 0,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "YouTube - Music Playlist",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T08:25:00+00:00",
+        "end_time": "2026-07-20T08:30:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 1,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T08:30:00+00:00",
+        "end_time": "2026-07-20T08:35:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 7,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T08:35:00+00:00",
+        "end_time": "2026-07-20T08:40:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 9,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T08:40:00+00:00",
+        "end_time": "2026-07-20T08:45:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 11,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T08:45:00+00:00",
+        "end_time": "2026-07-20T08:50:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 7,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T08:50:00+00:00",
+        "end_time": "2026-07-20T08:55:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 9,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T08:55:00+00:00",
+        "end_time": "2026-07-20T09:00:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 11,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "analytics_engine.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T09:00:00+00:00",
+        "end_time": "2026-07-20T09:05:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 7,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "unknown",
+        "window_title": "Break",
+        "activity_type": "IDLE",
+        "start_time": "2026-07-20T09:05:00+00:00",
+        "end_time": "2026-07-20T09:10:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 0,
+        "mouse_count": 0
+    },
+    {
+        "app_name": "unknown",
+        "window_title": "Break",
+        "activity_type": "IDLE",
+        "start_time": "2026-07-20T09:10:00+00:00",
+        "end_time": "2026-07-20T09:15:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 0,
+        "mouse_count": 0
+    },
+    {
+        "app_name": "unknown",
+        "window_title": "Break",
+        "activity_type": "IDLE",
+        "start_time": "2026-07-20T09:15:00+00:00",
+        "end_time": "2026-07-20T09:20:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 0,
+        "mouse_count": 0
+    },
+    {
+        "app_name": "unknown",
+        "window_title": "Break",
+        "activity_type": "IDLE",
+        "start_time": "2026-07-20T09:20:00+00:00",
+        "end_time": "2026-07-20T09:25:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 0,
+        "mouse_count": 0
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T09:25:00+00:00",
+        "end_time": "2026-07-20T09:30:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 6,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T09:30:00+00:00",
+        "end_time": "2026-07-20T09:35:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 8,
+        "mouse_count": 4
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T09:35:00+00:00",
+        "end_time": "2026-07-20T09:40:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 10,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T09:40:00+00:00",
+        "end_time": "2026-07-20T09:45:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 6,
+        "mouse_count": 4
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T09:45:00+00:00",
+        "end_time": "2026-07-20T09:50:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 8,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T09:50:00+00:00",
+        "end_time": "2026-07-20T09:55:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 10,
+        "mouse_count": 4
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T09:55:00+00:00",
+        "end_time": "2026-07-20T10:00:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 6,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T10:00:00+00:00",
+        "end_time": "2026-07-20T10:05:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 8,
+        "mouse_count": 4
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T10:05:00+00:00",
+        "end_time": "2026-07-20T10:10:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 10,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "Streamlit Documentation - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T10:10:00+00:00",
+        "end_time": "2026-07-20T10:15:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 2,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "Streamlit Documentation - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T10:15:00+00:00",
+        "end_time": "2026-07-20T10:20:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 4,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "chrome.exe",
+        "window_title": "Streamlit Documentation - Google Chrome",
+        "activity_type": "BROWSING",
+        "start_time": "2026-07-20T10:20:00+00:00",
+        "end_time": "2026-07-20T10:25:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 6,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T10:25:00+00:00",
+        "end_time": "2026-07-20T10:30:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 7,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T10:30:00+00:00",
+        "end_time": "2026-07-20T10:35:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 9,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T10:35:00+00:00",
+        "end_time": "2026-07-20T10:40:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 11,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T10:40:00+00:00",
+        "end_time": "2026-07-20T10:45:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 7,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T10:45:00+00:00",
+        "end_time": "2026-07-20T10:50:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 9,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "dashboard.py - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T10:50:00+00:00",
+        "end_time": "2026-07-20T10:55:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 11,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "WhatsApp.Root.exe",
+        "window_title": "WhatsApp",
+        "activity_type": "COMMUNICATION",
+        "start_time": "2026-07-20T10:55:00+00:00",
+        "end_time": "2026-07-20T11:00:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 3,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "WhatsApp.Root.exe",
+        "window_title": "WhatsApp",
+        "activity_type": "COMMUNICATION",
+        "start_time": "2026-07-20T11:00:00+00:00",
+        "end_time": "2026-07-20T11:05:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 5,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "README.md - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T11:05:00+00:00",
+        "end_time": "2026-07-20T11:10:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 5,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "README.md - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T11:10:00+00:00",
+        "end_time": "2026-07-20T11:15:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 7,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "README.md - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T11:15:00+00:00",
+        "end_time": "2026-07-20T11:20:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 9,
+        "mouse_count": 2
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "README.md - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T11:20:00+00:00",
+        "end_time": "2026-07-20T11:25:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 5,
+        "mouse_count": 3
+    },
+    {
+        "app_name": "Code.exe",
+        "window_title": "README.md - Visual Studio Code",
+        "activity_type": "CODING",
+        "start_time": "2026-07-20T11:25:00+00:00",
+        "end_time": "2026-07-20T11:30:00+00:00",
+        "duration_seconds": 300,
+        "key_count": 7,
+        "mouse_count": 2
+    }
+]
