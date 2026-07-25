@@ -7,7 +7,7 @@ __pycache__/
 # Virtual environments
 venv/
 .env/
-.venv/
+.venv/git commit -m "Day 8: Historical analytics dashboard and project validation"
 
 # VS Code
 .vscode/
@@ -31,6 +31,7 @@ data/users.json
 
 # Streamlit cache
 .streamlit/
+.streamlit/secrets.toml
 
 # Python cache
 .pytest_cache/
