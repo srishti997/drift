@@ -56,11 +56,7 @@ def load_activity_logs() -> list[dict[str, Any]]:
     if DEMO_MODE and logs:
         logs = _shift_demo_logs_to_today(logs)
 
-    print(f"Loading file: {selected_file}")
-    print(f"Loaded {len(logs)} logs")
-
-    if logs:
-        print(f"First log: {logs[0]}")
+    
 
     return logs
 
